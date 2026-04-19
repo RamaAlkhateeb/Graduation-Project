@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 30% 97%;
+    --foreground: 150 30% 12%;
+
+    --card: 40 25% 95%;
+    --card-foreground: 150 30% 12%;
+
+    --popover: 40 30% 97%;
+    --popover-foreground: 150 30% 12%;
+
+    --primary: 152 45% 28%;
+    --primary-foreground: 40 30% 97%;
+
+    --secondary: 40 35% 90%;
+    --secondary-foreground: 150 30% 18%;
+
+    --muted: 40 20% 92%;
+    --muted-foreground: 150 10% 45%;
+
+    --accent: 42 75% 55%;
+    --accent-foreground: 150 30% 12%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 152 45% 28%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 152 40% 18%;
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 42 75% 55%;
+    --sidebar-primary-foreground: 150 30% 12%;
+    --sidebar-accent: 152 35% 24%;
+    --sidebar-accent-foreground: 40 30% 95%;
+    --sidebar-border: 152 30% 25%;
+    --sidebar-ring: 42 75% 55%;
+
+    --chart-1: 152 45% 28%;
+    --chart-2: 42 75% 55%;
+    --chart-3: 200 60% 45%;
+    --chart-4: 18 70% 55%;
+    --chart-5: 280 50% 50%;
+
+    --success: 145 60% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 150 20% 8%;
+    --foreground: 40 25% 92%;
+    --card: 150 18% 12%;
+    --card-foreground: 40 25% 92%;
+    --popover: 150 18% 12%;
+    --popover-foreground: 40 25% 92%;
+    --primary: 152 45% 40%;
+    --primary-foreground: 40 30% 97%;
+    --secondary: 150 15% 18%;
+    --secondary-foreground: 40 25% 90%;
+    --muted: 150 12% 18%;
+    --muted-foreground: 40 15% 60%;
+    --accent: 42 75% 55%;
+    --accent-foreground: 150 30% 12%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 12% 20%;
+    --input: 150 12% 20%;
+    --ring: 152 45% 40%;
+    --sidebar-background: 150 25% 6%;
+    --sidebar-foreground: 40 25% 92%;
+    --sidebar-primary: 42 75% 55%;
+    --sidebar-primary-foreground: 150 30% 12%;
+    --sidebar-accent: 150 18% 12%;
+    --sidebar-accent-foreground: 40 25% 92%;
+    --sidebar-border: 150 12% 15%;
+    --sidebar-ring: 42 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    direction: rtl;
+  }
+
+  body {
+    @apply bg-background text-foreground font-tajawal antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
+  }
+  
+  .stat-card {
+    @apply glass-card rounded-xl p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(152, 45%, 28%), hsl(152, 45%, 22%));
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(42, 75%, 55%), hsl(42, 75%, 45%));
+  }
+
+  .islamic-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+}
