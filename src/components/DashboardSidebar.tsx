@@ -11,10 +11,14 @@ import {
   MessageSquare,
   ChevronLeft,
   Menu,
+  CalendarDays,
+  BookMarked,
 } from "lucide-react";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التحكم", path: "/" },
+  { icon: CalendarDays, label: "الفصول", path: "/semesters" },
+  { icon: BookMarked, label: "الكورسات", path: "/courses" },
   { icon: Users, label: "الأساتذة", path: "/teachers" },
   { icon: GraduationCap, label: "الطلاب", path: "/students" },
   { icon: BookOpen, label: "الحلقات", path: "/circles" },
