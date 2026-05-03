@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,11 @@ import {
   Plus,
   Calendar,
   BookOpen,
-  Users,
-  GraduationCap,
   Clock,
   Pencil,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Semester {
   id: number;
@@ -34,42 +33,6 @@ interface Semester {
   teachersCount: number;
 }
 
-const initialSemesters: Semester[] = [
-  {
-    id: 1,
-    name: "الفصل الأول 1446",
-    startDate: "2024-09-01",
-    endDate: "2025-01-15",
-    description:
-      "الفصل الدراسي الأول من العام الهجري 1446 يشمل حفظ ومراجعة الأجزاء العشرة الأولى من القرآن الكريم.",
-    circlesCount: 4,
-    studentsCount: 78,
-    teachersCount: 5,
-  },
-  {
-    id: 2,
-    name: "الفصل الثاني 1446",
-    startDate: "2025-02-01",
-    endDate: "2025-06-15",
-    description:
-      "الفصل الدراسي الثاني يركّز على إتقان التجويد وحفظ الأجزاء من 11 إلى 20.",
-    circlesCount: 5,
-    studentsCount: 92,
-    teachersCount: 6,
-  },
-  {
-    id: 3,
-    name: "الفصل الصيفي 1446",
-    startDate: "2025-07-01",
-    endDate: "2025-08-30",
-    description:
-      "دورة صيفية مكثّفة لمراجعة المحفوظ وإجراء الاختبارات النهائية.",
-    circlesCount: 3,
-    studentsCount: 45,
-    teachersCount: 3,
-  },
-];
-
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString("ar-EG", {
     year: "numeric",
@@ -81,16 +44,20 @@ const getStatus = (start: string, end: string) => {
   const now = new Date();
   const s = new Date(start);
   const e = new Date(end);
-  if (now < s) return { label: "قادم", color: "bg-info text-info-foreground" };
-  if (now > e) return { label: "منتهٍ", color: "bg-muted text-muted-foreground" };
-  return { label: "جارٍ", color: "bg-success text-success-foreground" };
+
+  if (now < s) return { label: "قادم", color: "bg-blue-500 text-white" };
+  if (now > e) return { label: "منتهٍ", color: "bg-gray-500 text-white" };
+  return { label: "جارٍ", color: "bg-green-500 text-white" };
 };
 
+const API = "http://alashmar.runasp.net/api/Semesters";
+
 const SemestersPage = () => {
-  const [semesters, setSemesters] = useState(initialSemesters);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Semester | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Semester | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -99,34 +66,73 @@ const SemestersPage = () => {
     description: "",
   });
 
-  // إضافة + تعديل
-  const handleSave = () => {
-    if (!form.name || !form.startDate || !form.endDate) return;
+  const token = localStorage.getItem("token");
 
-    if (selected) {
-      setSemesters(
-        semesters.map((s) =>
-          s.id === selected.id ? { ...s, ...form } : s
-        )
-      );
-      setSelected(null);
-    } else {
-      setSemesters([
-        ...semesters,
-        {
-          id: Date.now(),
-          ...form,
-          circlesCount: 0,
-          studentsCount: 0,
-          teachersCount: 0,
+  // ======================
+  // GET ALL
+  // ======================
+  const fetchSemesters = async () => {
+    try {
+      const res = await fetch(API, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      ]);
-    }
+      });
 
-    setForm({ name: "", startDate: "", endDate: "", description: "" });
-    setOpen(false);
+      const data = await res.json();
+      setSemesters(data);
+    } catch {
+      toast.error("فشل تحميل الفصول");
+    }
   };
 
+  useEffect(() => {
+    fetchSemesters();
+  }, []);
+
+  // ======================
+  // SAVE (CREATE / UPDATE)
+  // ======================
+  const handleSave = async () => {
+    if (!form.name || !form.startDate || !form.endDate) {
+      toast.error("يرجى تعبئة الحقول المطلوبة");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const method = selected ? "PUT" : "POST";
+      const url = selected ? `${API}/${selected.id}` : API;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success(selected ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح");
+
+      setOpen(false);
+      setSelected(null);
+      setForm({ name: "", startDate: "", endDate: "", description: "" });
+
+      fetchSemesters();
+    } catch {
+      toast.error("حدث خطأ أثناء الحفظ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ======================
+  // EDIT
+  // ======================
   const handleEdit = (semester: Semester) => {
     setForm({
       name: semester.name,
@@ -134,18 +140,40 @@ const SemestersPage = () => {
       endDate: semester.endDate,
       description: semester.description,
     });
+
     setSelected(semester);
     setOpen(true);
   };
 
-  const confirmDelete = () => {
+  // ======================
+  // DELETE
+  // ======================
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setSemesters(semesters.filter((s) => s.id !== deleteTarget.id));
-    setDeleteTarget(null);
+
+    try {
+      const res = await fetch(`${API}/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success("تم الحذف بنجاح");
+      setDeleteTarget(null);
+
+      fetchSemesters();
+    } catch {
+      toast.error("فشل الحذف");
+    }
   };
 
   return (
-    <DashboardLayout title="الفصول" subtitle="إدارة الفصول الدراسية وعرض تفاصيلها">
+    <DashboardLayout title="الفصول" subtitle="إدارة الفصول الدراسية">
+
+      {/* إضافة */}
       <div className="flex justify-end mb-6">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -155,25 +183,28 @@ const SemestersPage = () => {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="font-tajawal" dir="rtl">
+          <DialogContent dir="rtl">
             <DialogHeader>
               <DialogTitle>
-                {selected ? "تعديل الفصل" : "إنشاء فصل جديد"}
+                {selected ? "تعديل فصل" : "إضافة فصل"}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 mt-4">
+
               <div>
-                <Label>اسم الفصل</Label>
+                <Label>الاسم</Label>
                 <Input
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, name: e.target.value })
+                  }
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>تاريخ البدء</Label>
+                  <Label>من</Label>
                   <Input
                     type="date"
                     value={form.startDate}
@@ -182,8 +213,9 @@ const SemestersPage = () => {
                     }
                   />
                 </div>
+
                 <div>
-                  <Label>تاريخ الانتهاء</Label>
+                  <Label>إلى</Label>
                   <Input
                     type="date"
                     value={form.endDate}
@@ -201,102 +233,85 @@ const SemestersPage = () => {
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  rows={4}
                 />
               </div>
 
-              <Button onClick={handleSave} className="w-full">
-                {selected ? "حفظ التعديل" : "إنشاء"}
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "جارٍ الحفظ..." : "حفظ"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* الكروت */}
+      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {semesters.map((semester, i) => {
-          const status = getStatus(semester.startDate, semester.endDate);
+        {semesters.map((s) => {
+          const status = getStatus(s.startDate, s.endDate);
 
           return (
-            <button
-              key={semester.id}
-              onClick={() => setSelected(semester)}
-              className="glass-card rounded-xl p-6 text-right animate-fade-in hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
-              style={{ animationDelay: `${i * 100}ms` }}
+            <div
+              key={s.id}
+              className="p-5 border rounded-xl bg-card"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BookOpen className="h-6 w-6 text-primary-foreground" />
-                </div>
+              <div className="flex justify-between items-start">
+                <BookOpen />
 
-                <div className="flex items-center gap-2">
-                  {/* تعديل */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(semester);
-                    }}
-                    className="p-2 rounded-lg hover:bg-muted transition"
-                  >
-                    <Pencil className="h-4 w-4 text-primary" />
+                <div className="flex gap-2">
+                  <button onClick={() => handleEdit(s)}>
+                    <Pencil />
                   </button>
 
-                  {/* حذف */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget(semester);
-                    }}
-                    className="p-2 rounded-lg hover:bg-destructive/10 transition"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <button onClick={() => setDeleteTarget(s)}>
+                    <Trash2 />
                   </button>
 
-                  <Badge className={status.color}>{status.label}</Badge>
+                  <Badge className={status.color}>
+                    {status.label}
+                  </Badge>
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                {semester.name}
-              </h3>
+              <h3 className="font-bold mt-3">{s.name}</h3>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span>البدء: {formatDate(semester.startDate)}</span>
-                </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {s.description}
+              </p>
 
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4 text-accent" />
-                  <span>الانتهاء: {formatDate(semester.endDate)}</span>
-                </div>
+              <div className="text-sm mt-3">
+                <div>من: {formatDate(s.startDate)}</div>
+                <div>إلى: {formatDate(s.endDate)}</div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
 
-      {/* تأكيد الحذف */}
+      {/* Delete */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent dir="rtl">
           <DialogHeader>
             <DialogTitle>تأكيد الحذف</DialogTitle>
           </DialogHeader>
 
-          <p>هل أنت متأكد من حذف هذا الفصل؟</p>
+          <p>هل أنت متأكد؟</p>
 
           <div className="flex gap-3 mt-4">
             <Button variant="destructive" onClick={confirmDelete}>
               حذف
             </Button>
 
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline">
               إلغاء
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
     </DashboardLayout>
   );
 };
