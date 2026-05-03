@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "لوحة التحكم", path: "/" },
+  { icon: LayoutDashboard, label: "لوحة التحكم", path: "/index" },
   { icon: CalendarDays, label: "الفصول", path: "/semesters" },
   { icon: BookMarked, label: "الكورسات", path: "/courses" },
   { icon: Users, label: "الأساتذة", path: "/teachers" },
