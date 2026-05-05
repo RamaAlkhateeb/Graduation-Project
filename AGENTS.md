@@ -1,3 +1,15 @@
+# AI Agent Guidance
+
+- **Purpose**: Short, actionable rules for AI coding assistants working on this repository.
+- **Primary tasks**: Make minimal, focused changes; prefer editing the owning page/component; add tests for behavior changes.
+- **Dev commands**: use `npm run dev`, `npm run build`, `npm run test`, `npm run test:watch`.
+- **Testing**: Use Vitest and Testing Library. Test setup: [src/test/setup.ts](src/test/setup.ts).
+- **UI & Styling**: App is RTL, Arabic-first. Reuse primitives in [src/components/ui](src/components/ui). Preserve the green/gold palette and Tajawal font in [src/index.css](src/index.css).
+- **Architecture**: Pages live in [src/pages](src/pages). Shared layout: [src/components/DashboardLayout.tsx](src/components/DashboardLayout.tsx) and [src/components/DashboardSidebar.tsx](src/components/DashboardSidebar.tsx).
+- **Auth & Navigation**: Login flow is in [src/pages/LoginPage.tsx](src/pages/LoginPage.tsx). Routes: `/`, `/index`, `/semesters`, `/courses`, `/teachers`, `/students`, `/circles`, `/attendance`, `/exams`, `/surveys`, `/notes`.
+- **Coding rules**: Use the `@` import alias for app code; keep changes consistent with existing formatting and naming; avoid introducing new design systems or global style changes unless explicitly approved.
+- **When unsure**: Ask for clarification before changing auth, navigation, or global styles; prefer small incremental PRs with tests.
+
 # Project Notes
 
 ## Stack
