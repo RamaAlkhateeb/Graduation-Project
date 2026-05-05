@@ -18,6 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import TableRowContextMenu from "@/components/TableRowContextMenu";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -645,43 +646,59 @@ const StudentsPage = () => {
                                 </tr>
                             ) : (
                                 filtered.map((student) => (
-                                    <tr
+                                    <TableRowContextMenu
                                         key={student.id}
-                                        className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                                        actions={[
+                                            {
+                                                label: "تعديل",
+                                                icon: <Pencil className="h-4 w-4" />,
+                                                onSelect: () => handleStartEdit(student),
+                                            },
+                                            {
+                                                label: "حذف",
+                                                icon: <Trash2 className="h-4 w-4" />,
+                                                onSelect: () => handleDelete(student.id),
+                                                destructive: true,
+                                            },
+                                        ]}
                                     >
-                                        <td className="p-4">{student.name}</td>
-                                        <td className="p-4">{student.fatherName}</td>
-                                        <td className="p-4">{student.motherName}</td>
-                                        <td className="p-4">{student.nationalityNumber}</td>
-                                        <td className="p-4">{student.email || "-"}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => handleStartEdit(student)}
-                                                    disabled={isLoading}
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                    تعديل
-                                                </Button>
+                                        <tr
+                                            className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                                        >
+                                            <td className="p-4">{student.name}</td>
+                                            <td className="p-4">{student.fatherName}</td>
+                                            <td className="p-4">{student.motherName}</td>
+                                            <td className="p-4">{student.nationalityNumber}</td>
+                                            <td className="p-4">{student.email || "-"}</td>
+                                            <td className="p-4">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        onClick={() => handleStartEdit(student)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        تعديل
+                                                    </Button>
 
-                                                <Button
-                                                    type="button"
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => handleDelete(student.id)}
-                                                    disabled={isLoading}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                    حذف
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        onClick={() => handleDelete(student.id)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        حذف
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </TableRowContextMenu>
                                 ))
                             )}
                         </tbody>

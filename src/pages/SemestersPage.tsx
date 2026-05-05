@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -14,24 +14,34 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus,
-  Calendar,
   BookOpen,
-  Clock,
   Pencil,
   Trash2,
+  BookMarked,
 } from "lucide-react";
 import { toast } from "sonner";
+import TableRowContextMenu from "@/components/TableRowContextMenu";
 
 interface Semester {
-  id: number;
+  id: string;
   name: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  circlesCount: number;
-  studentsCount: number;
-  teachersCount: number;
+  startDate: string | null;
+  endDate: string | null;
 }
+
+interface Course {
+  id: string;
+  eventName: string;
+  semesterId: string | null;
+}
+
+interface SemesterPayload {
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
 
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString("ar-EG", {
@@ -50,51 +60,59 @@ const getStatus = (start: string, end: string) => {
   return { label: "جارٍ", color: "bg-green-500 text-white" };
 };
 
-const API = "http://alashmar.runasp.net/api/Semesters";
-
 const SemestersPage = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Semester | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Semester | null>(null);
+  const [relatedSemester, setRelatedSemester] = useState<Semester | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SemesterPayload>({
     name: "",
     startDate: "",
     endDate: "",
-    description: "",
   });
 
-  const token = localStorage.getItem("token");
+  const axiosClient = useMemo(() => {
+    const token = localStorage.getItem("token");
 
-  // ======================
-  // GET ALL
-  // ======================
+    return axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  }, []);
+
   const fetchSemesters = async () => {
     try {
-      const res = await fetch(API, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-      setSemesters(data);
-    } catch {
+      const res = await axiosClient.get<Semester[]>("/Semesters");
+      setSemesters(res.data);
+    } catch (error) {
+      console.error(error);
       toast.error("فشل تحميل الفصول");
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const res = await axiosClient.get<Course[]>("/courses");
+      setCourses(res.data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
   useEffect(() => {
     fetchSemesters();
+    fetchCourses();
   }, []);
 
-  // ======================
-  // SAVE (CREATE / UPDATE)
-  // ======================
   const handleSave = async () => {
-    if (!form.name || !form.startDate || !form.endDate) {
+    if (!form.name) {
       toast.error("يرجى تعبئة الحقول المطلوبة");
       return;
     }
@@ -102,70 +120,62 @@ const SemestersPage = () => {
     try {
       setLoading(true);
 
-      const method = selected ? "PUT" : "POST";
-      const url = selected ? `${API}/${selected.id}` : API;
+      const payload: SemesterPayload = {
+        name: form.name,
+        startDate: form.startDate || null,
+        endDate: form.endDate || null,
+      };
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!res.ok) throw new Error();
+      if (selected) {
+        await axiosClient.put(`/Semesters/${selected.id}`, payload);
+      } else {
+        await axiosClient.post("/Semesters", payload);
+      }
 
       toast.success(selected ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح");
 
       setOpen(false);
       setSelected(null);
-      setForm({ name: "", startDate: "", endDate: "", description: "" });
+      setForm({ name: "", startDate: "", endDate: "" });
 
       fetchSemesters();
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error("حدث خطأ أثناء الحفظ");
     } finally {
       setLoading(false);
     }
   };
 
-  // ======================
-  // EDIT
-  // ======================
   const handleEdit = (semester: Semester) => {
     setForm({
       name: semester.name,
-      startDate: semester.startDate,
-      endDate: semester.endDate,
-      description: semester.description,
+      startDate: semester.startDate ?? "",
+      endDate: semester.endDate ?? "",
     });
 
     setSelected(semester);
     setOpen(true);
   };
 
-  // ======================
-  // DELETE
-  // ======================
+  const handleShowCourses = (semester: Semester) => {
+    setRelatedSemester(semester);
+  };
+
+  const relatedCourses = courses.filter((course) => course.semesterId === relatedSemester?.id);
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
 
     try {
-      const res = await fetch(`${API}/${deleteTarget.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error();
+      await axiosClient.delete(`/Semesters/${deleteTarget.id}`);
 
       toast.success("تم الحذف بنجاح");
       setDeleteTarget(null);
 
       fetchSemesters();
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error("فشل الحذف");
     }
   };
@@ -207,7 +217,7 @@ const SemestersPage = () => {
                   <Label>من</Label>
                   <Input
                     type="date"
-                    value={form.startDate}
+                    value={form.startDate ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, startDate: e.target.value })
                     }
@@ -218,22 +228,12 @@ const SemestersPage = () => {
                   <Label>إلى</Label>
                   <Input
                     type="date"
-                    value={form.endDate}
+                    value={form.endDate ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, endDate: e.target.value })
                     }
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label>الوصف</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                />
               </div>
 
               <Button
@@ -248,48 +248,94 @@ const SemestersPage = () => {
         </Dialog>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {semesters.map((s) => {
-          const status = getStatus(s.startDate, s.endDate);
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="p-4 text-right">الاسم</th>
+                <th className="p-4 text-right">من</th>
+                <th className="p-4 text-right">إلى</th>
+                <th className="p-4 text-right">الحالة</th>
+                <th className="p-4 text-right">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {semesters.map((semester) => {
+                const hasDates = Boolean(semester.startDate && semester.endDate);
+                const status = hasDates
+                  ? getStatus(semester.startDate as string, semester.endDate as string)
+                  : { label: "غير مكتمل", color: "bg-yellow-500 text-white" };
 
-          return (
-            <div
-              key={s.id}
-              className="p-5 border rounded-xl bg-card"
-            >
-              <div className="flex justify-between items-start">
-                <BookOpen />
-
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(s)}>
-                    <Pencil />
-                  </button>
-
-                  <button onClick={() => setDeleteTarget(s)}>
-                    <Trash2 />
-                  </button>
-
-                  <Badge className={status.color}>
-                    {status.label}
-                  </Badge>
-                </div>
-              </div>
-
-              <h3 className="font-bold mt-3">{s.name}</h3>
-
-              <p className="text-sm text-muted-foreground mt-2">
-                {s.description}
-              </p>
-
-              <div className="text-sm mt-3">
-                <div>من: {formatDate(s.startDate)}</div>
-                <div>إلى: {formatDate(s.endDate)}</div>
-              </div>
-            </div>
-          );
-        })}
+                return (
+                  <TableRowContextMenu
+                    key={semester.id}
+                    actions={[
+                      {
+                        label: "عرض الكورسات",
+                        icon: <BookMarked className="h-4 w-4" />,
+                        onSelect: () => handleShowCourses(semester),
+                      },
+                      {
+                        label: "تعديل",
+                        icon: <Pencil className="h-4 w-4" />,
+                        onSelect: () => handleEdit(semester),
+                      },
+                      {
+                        label: "حذف",
+                        icon: <Trash2 className="h-4 w-4" />,
+                        onSelect: () => setDeleteTarget(semester),
+                        destructive: true,
+                      },
+                    ]}
+                  >
+                    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="p-4 font-medium">{semester.name}</td>
+                      <td className="p-4">{semester.startDate ? formatDate(semester.startDate) : "-"}</td>
+                      <td className="p-4">{semester.endDate ? formatDate(semester.endDate) : "-"}</td>
+                      <td className="p-4">
+                        <Badge className={status.color}>{status.label}</Badge>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(semester)}>
+                            <Pencil className="h-4 w-4 ml-1" />
+                            تعديل
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(semester)}>
+                            <Trash2 className="h-4 w-4 ml-1" />
+                            حذف
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  </TableRowContextMenu>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <Dialog open={!!relatedSemester} onOpenChange={() => setRelatedSemester(null)}>
+        <DialogContent dir="rtl" className="font-tajawal max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>الكورسات التابعة للفصل</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {relatedCourses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">لا توجد كورسات مرتبطة بهذا الفصل.</p>
+            ) : (
+              relatedCourses.map((course) => (
+                <div key={course.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="font-medium">{course.eventName}</span>
+                  <span className="text-sm text-muted-foreground">{course.id}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
@@ -305,7 +351,7 @@ const SemestersPage = () => {
               حذف
             </Button>
 
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               إلغاء
             </Button>
           </div>

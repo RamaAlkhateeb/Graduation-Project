@@ -18,6 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import TableRowContextMenu from "@/components/TableRowContextMenu";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -572,44 +573,60 @@ const TeachersPage = () => {
                                 </tr>
                             ) : (
                                 filteredTeachers.map((teacher) => (
-                                    <tr
+                                    <TableRowContextMenu
                                         key={teacher.id}
-                                        className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                                        actions={[
+                                            {
+                                                label: "تعديل",
+                                                icon: <Pencil className="h-4 w-4" />,
+                                                onSelect: () => handleStartEdit(teacher),
+                                            },
+                                            {
+                                                label: "حذف",
+                                                icon: <Trash2 className="h-4 w-4" />,
+                                                onSelect: () => handleDelete(teacher.id),
+                                                destructive: true,
+                                            },
+                                        ]}
                                     >
-                                        <td className="p-4">{teacher.name}</td>
-                                        <td className="p-4">{teacher.fatherName}</td>
-                                        <td className="p-4">{teacher.motherName}</td>
-                                        <td className="p-4">{teacher.nationalityNumber}</td>
-                                        <td className="p-4">{teacher.email || "-"}</td>
-                                        <td className="p-4">{teacher.userId || "-"}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => handleStartEdit(teacher)}
-                                                    disabled={isLoading}
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                    تعديل
-                                                </Button>
+                                        <tr
+                                            className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                                        >
+                                            <td className="p-4">{teacher.name}</td>
+                                            <td className="p-4">{teacher.fatherName}</td>
+                                            <td className="p-4">{teacher.motherName}</td>
+                                            <td className="p-4">{teacher.nationalityNumber}</td>
+                                            <td className="p-4">{teacher.email || "-"}</td>
+                                            <td className="p-4">{teacher.userId || "-"}</td>
+                                            <td className="p-4">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        onClick={() => handleStartEdit(teacher)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        تعديل
+                                                    </Button>
 
-                                                <Button
-                                                    type="button"
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="gap-1"
-                                                    onClick={() => handleDelete(teacher.id)}
-                                                    disabled={isLoading}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                    حذف
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        onClick={() => handleDelete(teacher.id)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        حذف
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </TableRowContextMenu>
                                 ))
                             )}
                         </tbody>
