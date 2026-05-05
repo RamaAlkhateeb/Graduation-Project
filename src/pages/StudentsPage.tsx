@@ -11,6 +11,13 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +38,49 @@ interface StudentPayload {
     email: string | null;
 }
 
+interface PagedResponse<T> {
+    items?: T[];
+}
+
+interface Semester {
+    id: string;
+    name: string;
+}
+
+interface Course {
+    id: string;
+    eventName: string;
+}
+
+interface Halaqa {
+    id: string;
+    className: string;
+}
+
+interface TeacherOption {
+    id: string;
+    name: string;
+}
+
+interface Teacher {
+    id: string;
+    name: string;
+    fatherName: string;
+    motherName: string;
+    nationalityNumber: string;
+    email: string | null;
+    userId: string | null;
+}
+
+interface StudentFilters {
+    pageNumber: number;
+    pageSize: number;
+    classId: string;
+    semesterId: string;
+    eventId: string;
+    teacherId: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const emptyStudentPayload: StudentPayload = {
@@ -41,12 +91,27 @@ const emptyStudentPayload: StudentPayload = {
     email: "",
 };
 
+const defaultStudentFilters: StudentFilters = {
+    pageNumber: 1,
+    pageSize: 100,
+    classId: "",
+    semesterId: "",
+    eventId: "",
+    teacherId: "",
+};
+
 const StudentsPage = () => {
     const [students, setStudents] = useState<Student[]>([]);
+    const [semesters, setSemesters] = useState<Semester[]>([]);
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [halaqas, setHalaqas] = useState<Halaqa[]>([]);
+    const [teachers, setTeachers] = useState<TeacherOption[]>([]);
     const [search, setSearch] = useState("");
     const [open, setOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isFilterLoading, setIsFilterLoading] = useState(false);
+    const [studentFilters, setStudentFilters] = useState<StudentFilters>(defaultStudentFilters);
 
     const [newStudent, setNewStudent] = useState<StudentPayload>(emptyStudentPayload);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -73,6 +138,90 @@ const StudentsPage = () => {
         [authHeaders]
     );
 
+    const buildStudentParams = (filters: StudentFilters) => ({
+        pageNumber: filters.pageNumber,
+        pageSize: filters.pageSize,
+        ...(filters.classId ? { classId: filters.classId } : {}),
+        ...(filters.semesterId ? { semesterId: filters.semesterId } : {}),
+        ...(filters.eventId ? { eventId: filters.eventId } : {}),
+        ...(filters.teacherId ? { teacherId: filters.teacherId } : {}),
+    });
+
+    const normalizeTeachers = (data: Teacher[] | PagedResponse<Teacher>) => {
+        if (Array.isArray(data)) {
+            return data;
+        }
+
+        return data.items ?? [];
+    };
+
+    const fetchSemesters = async () => {
+        try {
+            setIsFilterLoading(true);
+            const response = await axiosClient.get<Semester[]>("/Semesters");
+            setSemesters(response.data);
+        } catch (error) {
+            console.error(error);
+            toast.error("تعذر تحميل الفصول");
+        } finally {
+            setIsFilterLoading(false);
+        }
+    };
+
+    const fetchCoursesBySemester = async (semesterId: string) => {
+        try {
+            setIsFilterLoading(true);
+            const response = await axiosClient.get<Course[]>(`/courses/by-semester/${semesterId}`);
+            setCourses(response.data);
+        } catch (error) {
+            console.error(error);
+            toast.error("تعذر تحميل الأحداث");
+        } finally {
+            setIsFilterLoading(false);
+        }
+    };
+
+    const fetchHalaqasByCourse = async (courseId: string) => {
+        try {
+            setIsFilterLoading(true);
+            const response = await axiosClient.get<Halaqa[]>(`/halaqas/by-course/${courseId}`);
+            setHalaqas(response.data);
+        } catch (error) {
+            console.error(error);
+            toast.error("تعذر تحميل الحلقات");
+        } finally {
+            setIsFilterLoading(false);
+        }
+    };
+
+    const fetchTeachersByFilters = async (filters: StudentFilters) => {
+        if (!filters.classId) {
+            setTeachers([]);
+            return;
+        }
+
+        try {
+            setIsFilterLoading(true);
+            const response = await axiosClient.get<Teacher[] | PagedResponse<Teacher>>("/teachers/filtered", {
+                params: {
+                    pageNumber: 1,
+                    pageSize: 100,
+                    classId: filters.classId,
+                    ...(filters.semesterId ? { semesterId: filters.semesterId } : {}),
+                    ...(filters.eventId ? { eventId: filters.eventId } : {}),
+                },
+            });
+
+            const normalizedTeachers = normalizeTeachers(response.data);
+            setTeachers(normalizedTeachers.map((teacher) => ({ id: teacher.id, name: teacher.name })));
+        } catch (error) {
+            console.error(error);
+            toast.error("تعذر تحميل الأساتذة");
+        } finally {
+            setIsFilterLoading(false);
+        }
+    };
+
     const filtered = students.filter(
         (student) =>
             student.name.includes(search) ||
@@ -81,11 +230,14 @@ const StudentsPage = () => {
             student.nationalityNumber.includes(search)
     );
 
-    const fetchStudents = async () => {
+    const fetchStudents = async (filters: StudentFilters = studentFilters) => {
         try {
             setIsLoading(true);
-            const response = await axiosClient.get<Student[]>("/api/students");
-            setStudents(response.data);
+            const response = await axiosClient.get<Student[] | PagedResponse<Student>>("/students/filtered", {
+                params: buildStudentParams(filters),
+            });
+
+            setStudents(Array.isArray(response.data) ? response.data : response.data.items ?? []);
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل بيانات الطلاب");
@@ -96,7 +248,71 @@ const StudentsPage = () => {
 
     useEffect(() => {
         fetchStudents();
+        fetchSemesters();
     }, []);
+
+    const handleApplyStudentFilters = () => {
+        fetchStudents(studentFilters);
+    };
+
+    const handleResetStudentFilters = () => {
+        setStudentFilters(defaultStudentFilters);
+        setCourses([]);
+        setHalaqas([]);
+        setTeachers([]);
+        fetchStudents(defaultStudentFilters);
+    };
+
+    const handleStudentSemesterChange = (semesterId: string) => {
+        const nextFilters = {
+            ...studentFilters,
+            semesterId,
+            eventId: "",
+            classId: "",
+            teacherId: "",
+        };
+
+        setStudentFilters(nextFilters);
+        setCourses([]);
+        setHalaqas([]);
+        setTeachers([]);
+
+        if (semesterId) {
+            fetchCoursesBySemester(semesterId);
+        }
+    };
+
+    const handleStudentEventChange = (eventId: string) => {
+        const nextFilters = {
+            ...studentFilters,
+            eventId,
+            classId: "",
+            teacherId: "",
+        };
+
+        setStudentFilters(nextFilters);
+        setHalaqas([]);
+        setTeachers([]);
+
+        if (eventId) {
+            fetchHalaqasByCourse(eventId);
+        }
+    };
+
+    const handleStudentClassChange = (classId: string) => {
+        const nextFilters = {
+            ...studentFilters,
+            classId,
+            teacherId: "",
+        };
+
+        setStudentFilters(nextFilters);
+        setTeachers([]);
+
+        if (classId) {
+            fetchTeachersByFilters(nextFilters);
+        }
+    };
 
     const handleAdd = async () => {
         if (!newStudent.name || !newStudent.fatherName || !newStudent.nationalityNumber) {
@@ -111,7 +327,7 @@ const StudentsPage = () => {
                 email: newStudent.email || null,
             };
 
-            const response = await axiosClient.post<Student>("/api/students", payload);
+            const response = await axiosClient.post<Student>("/students", payload);
 
             setStudents((prev) => [...prev, response.data]);
             setNewStudent(emptyStudentPayload);
@@ -128,7 +344,7 @@ const StudentsPage = () => {
     const handleDelete = async (id: string) => {
         try {
             setIsLoading(true);
-            await axiosClient.delete(`/api/students/${id}`);
+            await axiosClient.delete(`/students/${id}`);
             setStudents((prev) => prev.filter((student) => student.id !== id));
             toast.success("تم حذف الطالب");
         } catch (error) {
@@ -168,7 +384,7 @@ const StudentsPage = () => {
             };
 
             const response = await axiosClient.put<Student>(
-                `/api/students/${editingStudent.id}`,
+                `/students/${editingStudent.id}`,
                 payload
             );
 
@@ -288,6 +504,116 @@ const StudentsPage = () => {
                         </div>
                     </DialogContent>
                 </Dialog>
+            </div>
+
+            <div className="glass-card rounded-xl p-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                    <div>
+                        <Label>معرف الفصل</Label>
+                        <Select
+                            value={studentFilters.semesterId || undefined}
+                            onValueChange={handleStudentSemesterChange}
+                            disabled={isFilterLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر الفصل" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {semesters.map((semester) => (
+                                    <SelectItem key={semester.id} value={semester.id}>
+                                        {semester.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label>معرف الحدث</Label>
+                        <Select
+                            value={studentFilters.eventId || undefined}
+                            onValueChange={handleStudentEventChange}
+                            disabled={!studentFilters.semesterId || isFilterLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر الحدث" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {courses.map((course) => (
+                                    <SelectItem key={course.id} value={course.id}>
+                                        {course.eventName}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label>معرف الحلقة</Label>
+                        <Select
+                            value={studentFilters.classId || undefined}
+                            onValueChange={handleStudentClassChange}
+                            disabled={!studentFilters.eventId || isFilterLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر الحلقة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {halaqas.map((halaqa) => (
+                                    <SelectItem key={halaqa.id} value={halaqa.id}>
+                                        {halaqa.className}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label>معرف الأستاذ</Label>
+                        <Select
+                            value={studentFilters.teacherId || undefined}
+                            onValueChange={(teacherId) =>
+                                setStudentFilters({ ...studentFilters, teacherId })
+                            }
+                            disabled={!studentFilters.classId || isFilterLoading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر الأستاذ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {teachers.map((teacher) => (
+                                    <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label>عدد النتائج</Label>
+                        <Input
+                            type="number"
+                            min="1"
+                            value={studentFilters.pageSize}
+                            onChange={(e) =>
+                                setStudentFilters({
+                                    ...studentFilters,
+                                    pageSize: Number(e.target.value) || 100,
+                                })
+                            }
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 mt-4">
+                    <Button type="button" variant="outline" onClick={handleResetStudentFilters} disabled={isLoading}>
+                        إعادة ضبط
+                    </Button>
+                    <Button type="button" onClick={handleApplyStudentFilters} disabled={isLoading}>
+                        تطبيق الفلاتر
+                    </Button>
+                </div>
             </div>
 
             <div className="glass-card rounded-xl overflow-hidden">
