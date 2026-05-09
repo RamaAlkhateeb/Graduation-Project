@@ -39,6 +39,11 @@ interface StudentBrief {
     nationalityNumber: string;
 }
 
+interface Teacher {
+    id: string;
+    name: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
 
 const emptyHalaqaPayload: HalaqaPayload = {
@@ -51,6 +56,11 @@ const CirclesPage = () => {
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
     const [students, setStudents] = useState<StudentBrief[]>([]);
+    const [studentOptions, setStudentOptions] = useState<StudentBrief[]>([]);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [studentToAddId, setStudentToAddId] = useState<string>("");
     const [search, setSearch] = useState("");
     const [selectedSemesterId, setSelectedSemesterId] = useState("");
     const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -150,10 +160,38 @@ const CirclesPage = () => {
         }
     };
 
+    const fetchTeachers = async () => {
+        try {
+            const response = await axiosClient.get<Teacher[]>('/teachers/filtered', {
+                params: { pageNumber: 1, pageSize: 100 },
+            });
+
+            setTeachers(response.data);
+        } catch (error) {
+            console.error(error);
+            toast.error('تعذر تحميل الأساتذة');
+        }
+    };
+
+    const fetchStudentOptions = async () => {
+        try {
+            const response = await axiosClient.get<StudentBrief[]>('/students/filtered', {
+                params: { pageNumber: 1, pageSize: 500 },
+            });
+
+            setStudentOptions(response.data);
+        } catch (error) {
+            console.error(error);
+            toast.error('تعذر تحميل قائمة الطلاب');
+        }
+    };
+
     useEffect(() => {
         fetchSemesters();
         fetchCourses();
         fetchCircles();
+        fetchTeachers();
+        fetchStudentOptions();
     }, []);
 
     const handleSemesterChange = (semesterId: string) => {
@@ -174,6 +212,8 @@ const CirclesPage = () => {
     const resetForm = () => {
         setForm(emptyHalaqaPayload);
         setSelected(null);
+        setSelectedTeacherId("");
+        setSelectedStudentIds([]);
     };
 
     const handleSave = async () => {
@@ -181,7 +221,10 @@ const CirclesPage = () => {
             toast.error("يرجى تعبئة الحقول المطلوبة");
             return;
         }
-
+        if (!selected && (!selectedTeacherId || selectedStudentIds.length === 0)) {
+            toast.error("عليك اختيار أستاذ واحد على الأقل وطالب واحد على الأقل");
+            return;
+        }
         try {
             setLoading(true);
             const payload = {
@@ -193,7 +236,26 @@ const CirclesPage = () => {
                 await axiosClient.put(`/halaqas/${selected.id}`, payload);
                 toast.success("تم تعديل الحلقة بنجاح");
             } else {
-                await axiosClient.post("/halaqas", payload);
+                const createResp = await axiosClient.post("/halaqas", payload);
+                const createdId = createResp.data?.id;
+
+                // enroll teacher
+                if (selectedTeacherId && createdId) {
+                    await axiosClient.post(`/teachers/${selectedTeacherId}/enrollments`, {
+                        classId: createdId,
+                        isMainTeacher: true,
+                    });
+                }
+
+                // enroll students
+                if (createdId && selectedStudentIds.length > 0) {
+                    await Promise.all(
+                        selectedStudentIds.map((studentId) =>
+                            axiosClient.post('/StudentEnrollment', { studentId, classId: createdId })
+                        )
+                    );
+                }
+
                 toast.success("تمت إضافة الحلقة بنجاح");
             }
 
@@ -205,6 +267,28 @@ const CirclesPage = () => {
             toast.error("حدث خطأ أثناء الحفظ");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddStudentToCircle = async () => {
+        if (!selectedCircleForStudents) return;
+        if (!studentToAddId) {
+            toast.error('اختر طالبًا لإضافته');
+            return;
+        }
+
+        try {
+            setStudentsLoading(true);
+            await axiosClient.post('/StudentEnrollment', { studentId: studentToAddId, classId: selectedCircleForStudents.id });
+            toast.success('تمت إضافة الطالب إلى الحلقة');
+            // refresh enrolled students
+            await fetchStudentsForCircle(selectedCircleForStudents);
+            setStudentToAddId('');
+        } catch (error) {
+            console.error(error);
+            toast.error('فشل إضافة الطالب');
+        } finally {
+            setStudentsLoading(false);
         }
     };
 
@@ -314,6 +398,58 @@ const CirclesPage = () => {
                                     onChange={(e) => setForm({ ...form, className: e.target.value })}
                                     placeholder="مثال: حلقة الفجر"
                                 />
+                            </div>
+                            <div>
+                                <Label>الأستاذ</Label>
+                                <Select value={selectedTeacherId || undefined} onValueChange={(v) => setSelectedTeacherId(v)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر الأستاذ" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {teachers.map((t) => (
+                                            <SelectItem key={t.id} value={t.id}>
+                                                {t.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>إضافة طلاب</Label>
+                                <div className="flex gap-2">
+                                    <Select value={studentToAddId || undefined} onValueChange={(v) => setStudentToAddId(v)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="اختر طالبًا" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {studentOptions.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={() => {
+                                        if (!studentToAddId) return toast.error('اختر طالبًا');
+                                        if (selectedStudentIds.includes(studentToAddId)) return toast.error('الطالب مضاف بالفعل');
+                                        setSelectedStudentIds((prev) => [...prev, studentToAddId]);
+                                        setStudentToAddId('');
+                                    }}>أضف</Button>
+                                </div>
+
+                                {selectedStudentIds.length > 0 && (
+                                    <div className="mt-2 space-y-1">
+                                        {selectedStudentIds.map((id) => {
+                                            const s = studentOptions.find((st) => st.id === id);
+                                            return (
+                                                <div key={id} className="flex items-centerуть justify-between rounded-lg border p-2">
+                                                    <div>{s?.name ?? id}</div>
+                                                    <Button variant="ghost" onClick={() => setSelectedStudentIds((prev) => prev.filter((x) => x !== id))}>إزالة</Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <Label>الكورس</Label>
