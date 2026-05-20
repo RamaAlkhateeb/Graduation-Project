@@ -254,10 +254,10 @@ const SemestersPage = () => {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="p-4 text-right">الاسم</th>
-                <th className="p-4 text-right">من</th>
-                <th className="p-4 text-right">إلى</th>
+                <th className="p-4 text-right">تاريخ البدء</th>
+                <th className="p-4 text-right">تاريخ الانتهاء</th>
                 <th className="p-4 text-right">الحالة</th>
-                <th className="p-4 text-right">الإجراءات</th>
+                <th className="p-4 text-right"></th>
               </tr>
             </thead>
             <tbody>

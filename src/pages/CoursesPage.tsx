@@ -262,8 +262,6 @@ const CoursesPage = () => {
                             <tr className="border-b border-border bg-muted/50">
                                 <th className="p-4 text-right">اسم الكورس</th>
                                 <th className="p-4 text-right">الفصل</th>
-                                <th className="p-4 text-right">معرّف الكورس</th>
-                                <th className="p-4 text-right">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -296,7 +294,7 @@ const CoursesPage = () => {
                                                 {semesterNameById.get(course.semesterId ?? "") ?? "غير محدد"}
                                             </Badge>
                                         </td>
-                                        <td className="p-4">{course.id}</td>
+                                        
                                         <td className="p-4">
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="outline" size="sm" onClick={() => handleEdit(course)}>

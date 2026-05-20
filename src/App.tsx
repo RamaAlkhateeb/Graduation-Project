@@ -10,7 +10,7 @@ import CoursesPage from "./pages/CoursesPage";
 import TeachersPage from "./pages/TeachersPage";
 import StudentsPage from "./pages/StudentsPage";
 import CirclesPage from "./pages/CirclesPage";
-import AttendancePage from "./pages/AttendancePage";
+import ReportsPage from "./pages/ReportsPage";
 import ExamsPage from "./pages/ExamsPage";
 import SurveysPage from "./pages/SurveysPage";
 import NotesPage from "./pages/NotesPage";
@@ -32,7 +32,7 @@ const App = () => (
           <Route path="/teachers" element={<TeachersPage />} />
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/circles" element={<CirclesPage />} />
-          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
           <Route path="/surveys" element={<SurveysPage />} />
           <Route path="/notes" element={<NotesPage />} />
