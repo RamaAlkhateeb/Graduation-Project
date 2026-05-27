@@ -25,7 +25,7 @@ import TableRowContextMenu from "@/components/TableRowContextMenu";
 
 interface Course {
     id: string;
-    eventName?: string | null;
+    courseName?: string | null;
     semesterId: string | null;
 }
 
@@ -41,14 +41,14 @@ interface Semester {
 }
 
 interface CoursePayload {
-    eventName: string;
+    courseName: string;
     semesterId: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
 
 const emptyCoursePayload: CoursePayload = {
-    eventName: "",
+    courseName: "",
     semesterId: "",
 };
 
@@ -81,7 +81,7 @@ const CoursesPage = () => {
     }, [semesters]);
 
     const filteredCourses = courses.filter((course) =>
-        (course.eventName ?? "").toLowerCase().includes(search.toLowerCase())
+        (course.courseName ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
     const fetchSemesters = async () => {
@@ -128,7 +128,7 @@ const CoursesPage = () => {
     };
 
     const handleSave = async () => {
-        if (!form.eventName || !form.semesterId) {
+        if (!form.courseName || !form.semesterId) {
             toast.error("يرجى تعبئة الحقول المطلوبة");
             return;
         }
@@ -136,7 +136,7 @@ const CoursesPage = () => {
         try {
             setLoading(true);
             const payload = {
-                eventName: form.eventName,
+                courseName: form.courseName,
                 semesterId: form.semesterId,
             };
 
@@ -162,7 +162,7 @@ const CoursesPage = () => {
     const handleEdit = (course: Course) => {
         setSelected(course);
         setForm({
-            eventName: course.eventName,
+            courseName: course.courseName,
             semesterId: course.semesterId ?? "",
         });
         setOpen(true);
@@ -222,8 +222,8 @@ const CoursesPage = () => {
                             <div>
                                 <Label>اسم الكورس</Label>
                                 <Input
-                                    value={form.eventName}
-                                    onChange={(e) => setForm({ ...form, eventName: e.target.value })}
+                                    value={form.courseName}
+                                    onChange={(e) => setForm({ ...form, courseName: e.target.value })}
                                     placeholder="مثال: دورة التجويد"
                                 />
                             </div>
@@ -288,7 +288,7 @@ const CoursesPage = () => {
                                     ]}
                                 >
                                     <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                                        <td className="p-4 font-medium">{course.eventName || "-"}</td>
+                                        <td className="p-4 font-medium">{course.courseName || "-"}</td>
                                         <td className="p-4">
                                             <Badge variant="secondary">
                                                 {semesterNameById.get(course.semesterId ?? "") ?? "غير محدد"}

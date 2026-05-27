@@ -177,8 +177,8 @@ The domain is centered on a few core chains:
 - Relationships: nested in `RoleDto`.
 
 #### `Course` family
-- `CreateCourseDto` | `eventName` (String), `semesterId` (UUID/String).
-- `UpdateCourseDto` | `eventName` (String), `semesterId` (UUID/String).
+- `CreateCourseDto` | `courseName` (String), `semesterId` (UUID/String).
+- `UpdateCourseDto` | `courseName` (String), `semesterId` (UUID/String).
 - `CourseDto` is not present as a named component in the inventory; the spec uses create/update payloads and collection/item endpoints.
 - Relationships: `semesterId` links course records to semesters.
 
