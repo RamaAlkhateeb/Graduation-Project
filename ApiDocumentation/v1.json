@@ -118,6 +118,23 @@
         ]
       }
     },
+    "/api/Auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get Current Account Information",
+        "description": "Returns current account information based on role. Teachers receive teacher info, students receive student info, and managers receive manager info.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
     "/api/AllowableExtensions": {
       "get": {
         "tags": [
@@ -3276,7 +3293,7 @@
           "Teacher"
         ],
         "summary": "Update Teacher",
-        "description": "Updates the personal information (name, national ID, email) of an existing teacher.",
+        "description": "Partially updates teacher profile/account fields. Only provided fields are changed; password is hashed before saving.",
         "parameters": [
           {
             "name": "id",
@@ -3493,6 +3510,23 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
+    "/api/teachers/my-halaqas": {
+      "get": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Get My Halaqas",
+        "description": "Retrieves all halaqas (study circles) assigned to the currently authenticated teacher.",
         "responses": {
           "200": {
             "description": "OK"
@@ -4080,7 +4114,7 @@
           "Student"
         ],
         "summary": "Update Student",
-        "description": "Updates the personal information (name, national ID, email) of an existing student.",
+        "description": "Partially updates student profile/account fields. Only provided fields are changed; password is hashed before saving.",
         "parameters": [
           {
             "name": "id",
@@ -6884,7 +6918,7 @@
           "Manager"
         ],
         "summary": "Update Manager",
-        "description": "Updates the profile information of an existing manager.",
+        "description": "Partially updates manager profile/account fields. Only provided fields are changed; password is hashed before saving.",
         "parameters": [
           {
             "name": "id",
@@ -9534,8 +9568,7 @@
           "fatherName",
           "motherName",
           "nationalityNumber",
-          "email",
-          "userId"
+          "email"
         ],
         "type": "object",
         "properties": {
@@ -9556,13 +9589,6 @@
               "null",
               "string"
             ]
-          },
-          "userId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           },
           "contactInfos": {
             "type": [
@@ -9654,7 +9680,10 @@
             "format": "int32"
           },
           "selectedOptionIds": {
-            "type": "array",
+            "type": [
+              "null",
+              "array"
+            ],
             "items": {
               "type": "string",
               "format": "uuid"
@@ -9785,7 +9814,10 @@
             ]
           },
           "questions": {
-            "type": "array",
+            "type": [
+              "null",
+              "array"
+            ],
             "items": {
               "$ref": "#/components/schemas/FormQuestionDto"
             }
@@ -9880,7 +9912,10 @@
             ]
           },
           "options": {
-            "type": "array",
+            "type": [
+              "null",
+              "array"
+            ],
             "items": {
               "$ref": "#/components/schemas/FormQuestionOptionDto"
             }
@@ -9983,7 +10018,10 @@
             "format": "int32"
           },
           "answers": {
-            "type": "array",
+            "type": [
+              "null",
+              "array"
+            ],
             "items": {
               "$ref": "#/components/schemas/FormAnswerDto"
             }
@@ -13148,21 +13186,25 @@
         }
       },
       "UpdateManagerDto": {
-        "required": [
-          "name",
-          "userId"
-        ],
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
-          },
-          "userId": {
             "type": [
               "null",
               "string"
-            ],
-            "format": "uuid"
+            ]
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13279,28 +13321,45 @@
         }
       },
       "UpdateStudentDto": {
-        "required": [
-          "name",
-          "fatherName",
-          "motherName",
-          "nationalityNumber",
-          "email"
-        ],
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "fatherName": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "motherName": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "nationalityNumber": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
             "type": [
               "null",
               "string"
@@ -13331,28 +13390,45 @@
         }
       },
       "UpdateTeacherDto": {
-        "required": [
-          "name",
-          "fatherName",
-          "motherName",
-          "nationalityNumber",
-          "email"
-        ],
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "fatherName": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "motherName": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "nationalityNumber": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
             "type": [
               "null",
               "string"

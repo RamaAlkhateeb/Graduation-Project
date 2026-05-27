@@ -25,13 +25,13 @@ import TableRowContextMenu from "@/components/TableRowContextMenu";
 
 interface Course {
     id: string;
-    eventName: string;
+    eventName?: string | null;
     semesterId: string | null;
 }
 
 interface Halaqa {
     id: string;
-    className: string;
+    className?: string | null;
     courseId: string | null;
 }
 
@@ -81,13 +81,13 @@ const CoursesPage = () => {
     }, [semesters]);
 
     const filteredCourses = courses.filter((course) =>
-        course.eventName.includes(search)
+        (course.eventName ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
     const fetchSemesters = async () => {
         try {
             const response = await axiosClient.get<Semester[]>("/Semesters");
-            setSemesters(response.data);
+            setSemesters(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل الفصول");
@@ -98,7 +98,7 @@ const CoursesPage = () => {
         try {
             setLoading(true);
             const response = await axiosClient.get<Course[]>("/courses");
-            setCourses(response.data);
+            setCourses(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل الكورسات");
@@ -110,7 +110,7 @@ const CoursesPage = () => {
     const fetchHalaqas = async () => {
         try {
             const response = await axiosClient.get<Halaqa[]>("/halaqas");
-            setHalaqas(response.data);
+            setHalaqas(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error(error);
         }
@@ -288,7 +288,7 @@ const CoursesPage = () => {
                                     ]}
                                 >
                                     <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                                        <td className="p-4 font-medium">{course.eventName}</td>
+                                        <td className="p-4 font-medium">{course.eventName || "-"}</td>
                                         <td className="p-4">
                                             <Badge variant="secondary">
                                                 {semesterNameById.get(course.semesterId ?? "") ?? "غير محدد"}
@@ -326,7 +326,7 @@ const CoursesPage = () => {
                         ) : (
                             relatedHalaqas.map((halaqa) => (
                                 <div key={halaqa.id} className="flex items-center justify-between rounded-lg border p-3">
-                                    <span className="font-medium">{halaqa.className}</span>
+                                    <span className="font-medium">{halaqa.className || "-"}</span>
                                     <span className="text-sm text-muted-foreground">{halaqa.id}</span>
                                 </div>
                             ))
