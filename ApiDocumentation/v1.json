@@ -3200,7 +3200,7 @@
           "Teacher"
         ],
         "summary": "Get Teachers (Filtered & Paged)",
-        "description": "Retrieves a paginated and filtered list of teachers. Supports filtering by class (halaqa), semester, and event.",
+        "description": "Retrieves a paginated and filtered list of teachers. Supports filtering by class (halaqa), semester, and course.",
         "parameters": [
           {
             "name": "pageNumber",
@@ -4013,7 +4013,7 @@
           "Student"
         ],
         "summary": "Get Students (Filtered & Paged)",
-        "description": "Retrieves a paginated and filtered list of students. Supports filtering by class (halaqa), semester, event, and teacher.",
+        "description": "Retrieves a paginated and filtered list of students. Supports filtering by class (halaqa), semester, course, and teacher.",
         "parameters": [
           {
             "name": "pageNumber",
@@ -11009,7 +11009,7 @@
       "PointBreakdownDto": {
         "required": [
           "courseId",
-          "eventDate",
+          "courseDate",
           "quranPoints",
           "hadithPoints",
           "attendancePoints",
@@ -11023,7 +11023,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "eventDate": {
+          "courseDate": {
             "type": "string",
             "format": "date-time"
           },
@@ -11131,6 +11131,75 @@
           }
         }
       },
+      "PointCourseDto": {
+        "required": [
+          "courseId",
+          "courseDate",
+          "quranPoints",
+          "hadithPoints",
+          "attendancePoints",
+          "behaviorPoints",
+          "totalPoints",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quranPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hadithPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attendancePoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "behaviorPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PointDto": {
         "required": [
           "id",
@@ -11185,75 +11254,6 @@
               "string"
             ],
             "format": "uuid"
-          }
-        }
-      },
-      "PointEventDto": {
-        "required": [
-          "courseId",
-          "eventDate",
-          "quranPoints",
-          "hadithPoints",
-          "attendancePoints",
-          "behaviorPoints",
-          "totalPoints",
-          "notes"
-        ],
-        "type": "object",
-        "properties": {
-          "courseId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "eventDate": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "quranPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "hadithPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "attendancePoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "behaviorPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "totalPoints": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -11320,7 +11320,7 @@
           "hadithPoints",
           "attendancePoints",
           "behaviorPoints",
-          "totalEvents"
+          "totalCourses"
         ],
         "type": "object",
         "properties": {
@@ -11364,7 +11364,7 @@
             ],
             "format": "int32"
           },
-          "totalEvents": {
+          "totalCourses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -12027,7 +12027,7 @@
           "hadithPoints",
           "attendancePoints",
           "behaviorPoints",
-          "pointEvents"
+          "pointCourses"
         ],
         "type": "object",
         "properties": {
@@ -12078,10 +12078,10 @@
             ],
             "format": "int32"
           },
-          "pointEvents": {
+          "pointCourses": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/PointEventDto"
+              "$ref": "#/components/schemas/PointCourseDto"
             }
           }
         }
