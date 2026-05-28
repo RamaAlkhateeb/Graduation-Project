@@ -54,6 +54,8 @@ interface PagedResponse<T> {
     items?: T[];
     data?: T[];
     totalItems?: number;
+    totalCount?: number;
+    count?: number;
     totalPages?: number;
     page?: number;
     pageSize?: number;
@@ -94,7 +96,7 @@ interface StudentFilters {
     pageSize: number;
     classId: string;
     semesterId: string;
-    eventId: string;
+    courseId: string;
     teacherId: string;
 }
 
@@ -113,7 +115,7 @@ const defaultStudentFilters: StudentFilters = {
     pageSize: 10,
     classId: "",
     semesterId: "",
-    eventId: "",
+    courseId: "",
     teacherId: "",
 };
 
@@ -167,7 +169,7 @@ const StudentsPage = () => {
         pageSize: filters.pageSize,
         ...(filters.classId ? { classId: filters.classId } : {}),
         ...(filters.semesterId ? { semesterId: filters.semesterId } : {}),
-        ...(filters.eventId ? { eventId: filters.eventId } : {}),
+        ...(filters.courseId ? { courseId: filters.courseId } : {}),
         ...(filters.teacherId ? { teacherId: filters.teacherId } : {}),
     });
 
@@ -385,7 +387,7 @@ const StudentsPage = () => {
                     pageSize: 100,
                     classId: filters.classId,
                     ...(filters.semesterId ? { semesterId: filters.semesterId } : {}),
-                    ...(filters.eventId ? { eventId: filters.eventId } : {}),
+                    ...(filters.courseId ? { courseId: filters.courseId } : {}),
                 },
             });
 
@@ -457,7 +459,7 @@ const StudentsPage = () => {
         const nextFilters = {
             ...studentFilters,
             semesterId,
-            eventId: "",
+            courseId: "",
             classId: "",
             teacherId: "",
         };
@@ -472,10 +474,10 @@ const StudentsPage = () => {
         }
     };
 
-    const handleStudentEventChange = (eventId: string) => {
+    const handleStudentCourseChange = (courseId: string) => {
         const nextFilters = {
             ...studentFilters,
-            eventId,
+            courseId,
             classId: "",
             teacherId: "",
         };
@@ -484,8 +486,8 @@ const StudentsPage = () => {
         setHalaqas([]);
         setTeachers([]);
 
-        if (eventId) {
-            fetchHalaqasByCourse(eventId);
+        if (courseId) {
+            fetchHalaqasByCourse(courseId);
         }
     };
 
@@ -752,14 +754,14 @@ const StudentsPage = () => {
                     </div>
 
                     <div>
-                        <Label>معرف الحدث</Label>
+                        <Label>معرف الدورة</Label>
                         <Select
-                            value={studentFilters.eventId || undefined}
-                            onValueChange={handleStudentEventChange}
+                            value={studentFilters.courseId || undefined}
+                            onValueChange={handleStudentCourseChange}
                             disabled={!studentFilters.semesterId || isFilterLoading}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="اختر الحدث" />
+                                <SelectValue placeholder="اختر الدورة" />
                             </SelectTrigger>
                             <SelectContent>
                                 {courses.map((course) => (
@@ -776,7 +778,7 @@ const StudentsPage = () => {
                         <Select
                             value={studentFilters.classId || undefined}
                             onValueChange={handleStudentClassChange}
-                            disabled={!studentFilters.eventId || isFilterLoading}
+                            disabled={!studentFilters.courseId || isFilterLoading}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر الحلقة" />

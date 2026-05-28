@@ -3243,7 +3243,7 @@
             }
           },
           {
-            "name": "eventId",
+            "name": "courseId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -4056,7 +4056,7 @@
             }
           },
           {
-            "name": "eventId",
+            "name": "courseId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -9384,7 +9384,7 @@
       "CreatePointDto": {
         "required": [
           "studentId",
-          "eventId",
+          "courseId",
           "classId",
           "smesterId",
           "pointValue",
@@ -9397,7 +9397,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "eventId": {
+          "courseId": {
             "type": "string",
             "format": "uuid"
           },
@@ -11008,7 +11008,7 @@
       },
       "PointBreakdownDto": {
         "required": [
-          "eventId",
+          "courseId",
           "eventDate",
           "quranPoints",
           "hadithPoints",
@@ -11019,7 +11019,7 @@
         ],
         "type": "object",
         "properties": {
-          "eventId": {
+          "courseId": {
             "type": "string",
             "format": "uuid"
           },
@@ -11135,7 +11135,7 @@
         "required": [
           "id",
           "studentId",
-          "eventId",
+          "courseId",
           "classId",
           "smesterId",
           "pointValue",
@@ -11152,7 +11152,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "eventId": {
+          "courseId": {
             "type": "string",
             "format": "uuid"
           },
@@ -11190,7 +11190,7 @@
       },
       "PointEventDto": {
         "required": [
-          "eventId",
+          "courseId",
           "eventDate",
           "quranPoints",
           "hadithPoints",
@@ -11201,7 +11201,7 @@
         ],
         "type": "object",
         "properties": {
-          "eventId": {
+          "courseId": {
             "type": "string",
             "format": "uuid"
           },

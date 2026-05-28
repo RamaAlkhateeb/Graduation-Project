@@ -21,7 +21,7 @@ The domain is centered on a few core chains:
 - `Teacher -> ClassTeacherEnrollment -> Attendance / Points / Student progress`
 - `Student -> Attendance / Points / Memorization / Attachments`
 - `Form -> FormQuestion -> FormQuestionOption -> FormResponse -> FormAnswer`
-- `Category / Event / Enrollment / Semester` identifiers are reused across points, attendance, and reporting endpoints.
+- `Category / course / Enrollment / Semester` identifiers are reused across points, attendance, and reporting endpoints.
 
 ### Security and Transport Notes
 
@@ -378,7 +378,7 @@ The domain is centered on a few core chains:
 #### `PointDto`
 - `id` | UUID/String | Identifier.
 - `studentId` | UUID/String | Student reference.
-- `eventId` | UUID/String | Event reference.
+- `courseId` | UUID/String | course reference.
 - `classId` | UUID/String | Class reference.
 - `smesterId` | UUID/String | Semester reference; the spec uses this spelling consistently.
 - `pointValue` | Number | Points awarded.
@@ -387,7 +387,7 @@ The domain is centered on a few core chains:
 
 #### `CreatePointDto`
 - `studentId` | UUID/String | Student reference.
-- `eventId` | UUID/String | Event reference.
+- `courseId` | UUID/String | course reference.
 - `classId` | UUID/String | Class reference.
 - `smesterId` | UUID/String | Semester reference.
 - `pointValue` | Number | Points awarded.
@@ -396,15 +396,15 @@ The domain is centered on a few core chains:
 
 #### `UpdatePointDto`
 - `studentId` | UUID/String | Student reference.
-- `eventId` | UUID/String | Event reference.
+- `courseId` | UUID/String | course reference.
 - `classId` | UUID/String | Class reference.
 - `smesterId` | UUID/String | Semester reference.
 - `pointValue` | Number | Points awarded.
 - `categoryId` | UUID/String | Point category reference.
 - `givenByTeacherId` | UUID/String | Teacher reference.
 
-#### `PointEventDto`
-- `eventDate` | DateTime-style string | Event date.
+#### `PointcourseDto`
+- `courseDate` | DateTime-style string | course date.
 - `quranPoints` | Number | Quran-related points.
 - `hadithPoints` | Number | Hadith-related points.
 - `attendancePoints` | Number | Attendance-related points.
@@ -433,7 +433,7 @@ The domain is centered on a few core chains:
 - `hadithPoints` | Number | Hadith-related points.
 - `attendancePoints` | Number | Attendance-related points.
 - `behaviorPoints` | Number | Behavior-related points.
-- `totalEvents` | Integer | Number of point events.
+- `totalcourses` | Integer | Number of point courses.
 
 #### `PointsOverviewReportDto`
 - `semesterId` | Nullable UUID/String | Semester filter.
@@ -476,7 +476,7 @@ The domain is centered on a few core chains:
 - `hadithPoints` | Number | Hadith-related points.
 - `attendancePoints` | Number | Attendance-related points.
 - `behaviorPoints` | Number | Behavior-related points.
-- `pointEvents` | Array of `PointEventDto` | Event-level detail.
+- `pointcourses` | Array of `PointcourseDto` | course-level detail.
 
 #### `StudentProgressUnderTeacherDto`
 - `studentId` | UUID/String | Student reference.
@@ -918,7 +918,7 @@ The following patterns are important for safe generated code:
 ```json
 {
   "studentId": "...",
-  "eventId": "...",
+  "courseId": "...",
   "classId": "...",
   "smesterId": "...",
   "pointValue": 10,

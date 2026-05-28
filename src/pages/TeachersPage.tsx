@@ -49,7 +49,7 @@ interface TeacherFilters {
     pageSize: number;
     classId?: string;
     semesterId?: string;
-    eventId?: string;
+    courseId?: string;
 }
 
 const API_BASE_URL =
@@ -142,8 +142,8 @@ const TeachersPage = () => {
                             ? { semesterId: filters.semesterId }
                             : {}),
 
-                        ...(filters.eventId
-                            ? { eventId: filters.eventId }
+                        ...(filters.courseId
+                            ? { courseId: filters.courseId }
                             : {}),
                     },
                 }
