@@ -156,6 +156,16 @@ const StudentsPage = () => {
         return data.items ?? [];
     };
 
+    const normalizeStudents = (data: Student[] | PagedResponse<Student>) => {
+        if (Array.isArray(data)) {
+            return data.filter((student): student is Student => Boolean(student?.id));
+        }
+
+        const collection = data.items ?? (data as { data?: Student[] }).data ?? [];
+
+        return collection.filter((student): student is Student => Boolean(student?.id));
+    };
+
     const fetchSemesters = async () => {
         try {
             setIsFilterLoading(true);
@@ -238,7 +248,7 @@ const StudentsPage = () => {
                 params: buildStudentParams(filters),
             });
 
-            setStudents(Array.isArray(response.data) ? response.data : response.data.items ?? []);
+            setStudents(normalizeStudents(response.data));
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل بيانات الطلاب");
@@ -328,9 +338,8 @@ const StudentsPage = () => {
                 email: newStudent.email || null,
             };
 
-            const response = await axiosClient.post<Student>("/students", payload);
-
-            setStudents((prev) => [...prev, response.data]);
+            await axiosClient.post("/students", payload);
+            await fetchStudents(studentFilters);
             setNewStudent(emptyStudentPayload);
             setOpen(false);
             toast.success("تمت إضافة الطالب بنجاح");
