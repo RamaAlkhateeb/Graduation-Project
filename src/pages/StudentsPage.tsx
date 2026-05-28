@@ -52,6 +52,11 @@ interface ExcelStudentRow {
 
 interface PagedResponse<T> {
     items?: T[];
+    data?: T[];
+    totalItems?: number;
+    totalPages?: number;
+    page?: number;
+    pageSize?: number;
 }
 
 interface Semester {
@@ -105,7 +110,7 @@ const emptyStudentPayload: StudentPayload = {
 
 const defaultStudentFilters: StudentFilters = {
     pageNumber: 1,
-    pageSize: 100,
+    pageSize: 10,
     classId: "",
     semesterId: "",
     eventId: "",
@@ -126,7 +131,10 @@ const StudentsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isFilterLoading, setIsFilterLoading] = useState(false);
     const [studentFilters, setStudentFilters] = useState<StudentFilters>(defaultStudentFilters);
-    const [totalStudents, setTotalStudents] = useState<number>(0);
+    const [studentPageMeta, setStudentPageMeta] = useState<{ totalItems: number; totalPages: number }>({
+        totalItems: 0,
+        totalPages: 0,
+    });
 
     const [newStudent, setNewStudent] = useState<StudentPayload>(emptyStudentPayload);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -179,19 +187,6 @@ const StudentsPage = () => {
         const collection = data.items ?? (data as { data?: Student[] }).data ?? [];
 
         return collection.filter((student): student is Student => Boolean(student?.id));
-    };
-
-    const getTotalFromResponse = (data: any) => {
-        // try several common shapes returned by the API
-        if (!data) return 0;
-        if (typeof data.totalCount === "number") return data.totalCount;
-        if (typeof data.total === "number") return data.total;
-        if (typeof data.totalItems === "number") return data.totalItems;
-        if (typeof data.count === "number") return data.count;
-        if (Array.isArray(data)) return data.length;
-        if (Array.isArray(data.items)) return data.items.length;
-        if (Array.isArray(data.data)) return data.data.length;
-        return 0;
     };
 
     const normalizeRowValue = (value: unknown) =>
@@ -420,8 +415,18 @@ const StudentsPage = () => {
             });
 
             setStudents(normalizeStudents(response.data));
-            const total = getTotalFromResponse(response.data);
-            setTotalStudents(total);
+            setStudentPageMeta({
+                totalItems:
+                    response.data && !Array.isArray(response.data)
+                        ? Number(response.data.totalItems ?? response.data.totalCount ?? response.data.count ?? 0)
+                        : Array.isArray(response.data)
+                        ? response.data.length
+                        : 0,
+                totalPages:
+                    response.data && !Array.isArray(response.data)
+                        ? Number(response.data.totalPages ?? 0)
+                        : 0,
+            });
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل بيانات الطلاب");
@@ -926,7 +931,10 @@ const StudentsPage = () => {
 
             <Pagination
                 currentPage={studentFilters.pageNumber}
-                totalPages={Math.max(1, Math.ceil(totalStudents / studentFilters.pageSize || 1))}
+                totalPages={Math.max(
+                    1,
+                    studentPageMeta.totalPages || Math.ceil((studentPageMeta.totalItems || students.length) / studentFilters.pageSize)
+                )}
                 onPageChange={(page) => {
                     const next = { ...studentFilters, pageNumber: page };
                     setStudentFilters(next);
