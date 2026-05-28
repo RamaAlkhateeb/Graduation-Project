@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { Plus, Users, Pencil, Trash2 } from "lucide-react";
+import { Plus, Users, Pencil, Trash2, Eye } from "lucide-react";
 
 import { toast } from "sonner";
 
@@ -28,7 +29,7 @@ interface Halaqa {
 
 interface Course {
   id: string;
-  eventName: string;
+  courseName: string;
 }
 
 interface HalaqaPayload {
@@ -58,6 +59,8 @@ const emptyHalaqaPayload: HalaqaPayload = {
 };
 
 const CirclesPage = () => {
+  const navigate = useNavigate();
+
   const [circles, setCircles] = useState<Halaqa[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<StudentBrief[]>([]);
@@ -89,7 +92,7 @@ const CirclesPage = () => {
   }, []);
 
   const courseNameById = useMemo(() => {
-    return new Map(courses.map((course) => [course.id, course.eventName]));
+    return new Map(courses.map((course) => [course.id, course.courseName]));
   }, [courses]);
 
   const normalizeCollection = <T,>(response: T[] | PagedResponse<T>) => {
@@ -229,6 +232,10 @@ const CirclesPage = () => {
     }
   };
 
+  const handleOpenDetails = (circle: Halaqa) => {
+    navigate(`/circles/${circle.id}`);
+  };
+
   return (
     <DashboardLayout
       title="الحلقات"
@@ -298,7 +305,7 @@ const CirclesPage = () => {
 
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
-                      {course.eventName}
+                      {course.courseName}
                     </option>
                   ))}
                 </select>
@@ -333,6 +340,11 @@ const CirclesPage = () => {
                   key={circle.id}
                   actions={[
                     {
+                      label: "عرض التفاصيل",
+                      icon: <Eye className="h-4 w-4" />,
+                      onSelect: () => handleOpenDetails(circle),
+                    },
+                    {
                       label: "عرض الطلاب المسجلين",
                       icon: <Users className="h-4 w-4" />,
                       onSelect: () => void fetchStudentsForCircle(circle),
@@ -359,6 +371,16 @@ const CirclesPage = () => {
 
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenDetails(circle)}
+                        >
+                          <Eye className="h-4 w-4 ml-1" />
+                          تفاصيل
+                        </Button>
+
                         <Button
                           type="button"
                           variant="outline"

@@ -9063,12 +9063,12 @@
       },
       "CreateCourseDto": {
         "required": [
-          "eventName",
+          "courseName",
           "semesterId"
         ],
         "type": "object",
         "properties": {
-          "eventName": {
+          "courseName": {
             "type": "string"
           },
           "semesterId": {
@@ -12948,11 +12948,11 @@
       },
       "UpdateCourseDto": {
         "required": [
-          "eventName"
+          "courseName"
         ],
         "type": "object",
         "properties": {
-          "eventName": {
+          "courseName": {
             "type": "string"
           }
         }

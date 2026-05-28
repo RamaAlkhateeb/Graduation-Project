@@ -50,7 +50,7 @@ interface Semester {
 
 interface Course {
     id: string;
-    eventName: string;
+    courseName: string;
 }
 
 interface Halaqa {
@@ -542,7 +542,7 @@ const StudentsPage = () => {
                             <SelectContent>
                                 {courses.map((course) => (
                                     <SelectItem key={course.id} value={course.id}>
-                                        {course.eventName}
+                                        {course.courseName}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

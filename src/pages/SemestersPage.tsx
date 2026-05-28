@@ -31,7 +31,7 @@ interface Semester {
 
 interface Course {
   id: string;
-  eventName: string;
+  courseName: string;
   semesterId: string | null;
 }
 
@@ -328,7 +328,7 @@ const SemestersPage = () => {
             ) : (
               relatedCourses.map((course) => (
                 <div key={course.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <span className="font-medium">{course.eventName}</span>
+                  <span className="font-medium">{course.courseName}</span>
                   <span className="text-sm text-muted-foreground">{course.id}</span>
                 </div>
               ))
