@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import TableRowContextMenu from "@/components/TableRowContextMenu";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import Pagination from "@/components/ui/pagination";
+import { FileSpreadsheet, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Student {
@@ -37,6 +39,15 @@ interface StudentPayload {
     motherName: string;
     nationalityNumber: string;
     email: string | null;
+}
+
+interface ExcelStudentRow {
+    name?: string;
+    fatherName?: string;
+    motherName?: string;
+    nationalityNumber?: string;
+    email?: string;
+    [key: string]: unknown;
 }
 
 interface PagedResponse<T> {
@@ -102,6 +113,8 @@ const defaultStudentFilters: StudentFilters = {
 };
 
 const StudentsPage = () => {
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     const [students, setStudents] = useState<Student[]>([]);
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
@@ -113,9 +126,11 @@ const StudentsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isFilterLoading, setIsFilterLoading] = useState(false);
     const [studentFilters, setStudentFilters] = useState<StudentFilters>(defaultStudentFilters);
+    const [totalStudents, setTotalStudents] = useState<number>(0);
 
     const [newStudent, setNewStudent] = useState<StudentPayload>(emptyStudentPayload);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+    const [bulkImportLoading, setBulkImportLoading] = useState(false);
 
     const authHeaders = useMemo(() => {
         const token = localStorage.getItem("token");
@@ -164,6 +179,162 @@ const StudentsPage = () => {
         const collection = data.items ?? (data as { data?: Student[] }).data ?? [];
 
         return collection.filter((student): student is Student => Boolean(student?.id));
+    };
+
+    const getTotalFromResponse = (data: any) => {
+        // try several common shapes returned by the API
+        if (!data) return 0;
+        if (typeof data.totalCount === "number") return data.totalCount;
+        if (typeof data.total === "number") return data.total;
+        if (typeof data.totalItems === "number") return data.totalItems;
+        if (typeof data.count === "number") return data.count;
+        if (Array.isArray(data)) return data.length;
+        if (Array.isArray(data.items)) return data.items.length;
+        if (Array.isArray(data.data)) return data.data.length;
+        return 0;
+    };
+
+    const normalizeRowValue = (value: unknown) =>
+        typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
+
+    const normalizeHeaderKey = (key: string) =>
+        key.toLowerCase().replace(/[_\s-]+/g, "").trim();
+
+    const getExcelValue = (row: ExcelStudentRow, keys: string[]) => {
+        const normalizedKeys = keys.map(normalizeHeaderKey);
+
+        for (const [rawKey, rawValue] of Object.entries(row)) {
+            if (!normalizedKeys.includes(normalizeHeaderKey(rawKey))) {
+                continue;
+            }
+
+            const value = normalizeRowValue(rawValue);
+
+            if (value) {
+                return value;
+            }
+        }
+
+        return "";
+    };
+
+    const buildStudentPayloadFromRow = (row: ExcelStudentRow): StudentPayload | null => {
+        const name = getExcelValue(row, ["name", "student name", "studentname", "full name", "الاسم", "اسم الطالب"]);
+        const fatherName = getExcelValue(row, ["fatherName", "father name", "father", "اسم الأب", "اسم الاب"]);
+        const motherName = getExcelValue(row, ["motherName", "mother name", "mother", "اسم الأم", "اسم الام"]);
+        const nationalityNumber = getExcelValue(row, ["nationalityNumber", "nationality number", "national id", "nationalid", "national number", "الرقم الوطني", "الرقم الوطنى"]);
+        const email = getExcelValue(row, ["email", "e-mail", "البريد الإلكتروني", "البريد الالكتروني"]);
+
+        if (!name || !fatherName || !motherName || !nationalityNumber) {
+            return null;
+        }
+
+        return {
+            name,
+            fatherName,
+            motherName,
+            nationalityNumber,
+            email: email || null,
+        };
+    };
+
+    const handleExcelImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleDownloadTemplate = () => {
+        const worksheet = XLSX.utils.aoa_to_sheet([
+            ["name", "fatherName", "motherName", "nationalityNumber", "email"],
+            ["Student Name", "Father Name", "Mother Name", "1234567890", "student@example.com"],
+        ]);
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "StudentsTemplate");
+
+        XLSX.writeFile(workbook, "students-import-template.xlsx");
+    };
+
+    const handleExcelFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+
+        event.target.value = "";
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+            toast.error("الرجاء اختيار ملف Excel بصيغة xlsx أو xls");
+            return;
+        }
+
+        try {
+            setBulkImportLoading(true);
+
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+
+            if (!sheetName) {
+                toast.error("ملف Excel لا يحتوي على أوراق عمل");
+                return;
+            }
+
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json<ExcelStudentRow>(worksheet, {
+                defval: "",
+                raw: false,
+            });
+
+            if (rows.length === 0) {
+                toast.error("لم يتم العثور على صفوف في ملف Excel");
+                return;
+            }
+
+            let createdCount = 0;
+            let skippedCount = 0;
+            let failedCount = 0;
+
+            for (const row of rows) {
+                const payload = buildStudentPayloadFromRow(row);
+
+                if (!payload) {
+                    skippedCount += 1;
+                    continue;
+                }
+
+                try {
+                    await axiosClient.post("/students", payload);
+                    createdCount += 1;
+                } catch (error) {
+                    failedCount += 1;
+                    console.error(error);
+                }
+            }
+
+            await fetchStudents(studentFilters);
+
+            if (createdCount > 0) {
+                toast.success(`تمت إضافة ${createdCount} طالب/طلاب بنجاح`);
+            }
+
+            if (skippedCount > 0) {
+                toast.message?.(`تم تخطي ${skippedCount} صفًا غير مكتمل`);
+            }
+
+            if (failedCount > 0) {
+                toast.error(`فشل إنشاء ${failedCount} صفًا`);
+            }
+
+            if (createdCount === 0 && skippedCount > 0 && failedCount === 0) {
+                toast.error("لم يتم إنشاء أي طالب. تأكد من أن الأعمدة المطلوبة موجودة في الملف");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("تعذر قراءة ملف Excel");
+        } finally {
+            setBulkImportLoading(false);
+        }
     };
 
     const fetchSemesters = async () => {
@@ -249,6 +420,8 @@ const StudentsPage = () => {
             });
 
             setStudents(normalizeStudents(response.data));
+            const total = getTotalFromResponse(response.data);
+            setTotalStudents(total);
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل بيانات الطلاب");
@@ -263,7 +436,8 @@ const StudentsPage = () => {
     }, []);
 
     const handleApplyStudentFilters = () => {
-        fetchStudents(studentFilters);
+        setStudentFilters({ ...studentFilters, pageNumber: 1 });
+        fetchStudents({ ...studentFilters, pageNumber: 1 });
     };
 
     const handleResetStudentFilters = () => {
@@ -428,6 +602,36 @@ const StudentsPage = () => {
                     />
                 </div>
 
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleExcelFileChange}
+                />
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleExcelImportClick}
+                    disabled={isLoading || bulkImportLoading}
+                >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    {bulkImportLoading ? "جارٍ الاستيراد..." : "استيراد Excel"}
+                </Button>
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleDownloadTemplate}
+                    disabled={isLoading || bulkImportLoading}
+                >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    تحميل القالب
+                </Button>
+
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button className="gap-2" disabled={isLoading}>
@@ -442,6 +646,10 @@ const StudentsPage = () => {
                         </DialogHeader>
 
                         <div className="space-y-4 mt-4">
+                            <p className="text-sm text-muted-foreground">
+                                يمكنك أيضًا استيراد الطلاب من ملف Excel عبر الأعمدة: الاسم، اسم الأب، اسم الأم، الرقم الوطني، البريد الإلكتروني.
+                            </p>
+
                             <div>
                                 <Label>الاسم</Label>
                                 <Input
@@ -610,6 +818,7 @@ const StudentsPage = () => {
                                 setStudentFilters({
                                     ...studentFilters,
                                     pageSize: Number(e.target.value) || 100,
+                                    pageNumber: 1,
                                 })
                             }
                         />
@@ -625,7 +834,7 @@ const StudentsPage = () => {
                     </Button>
                 </div>
             </div>
-
+            
             <div className="glass-card rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -714,6 +923,16 @@ const StudentsPage = () => {
                     </table>
                 </div>
             </div>
+
+            <Pagination
+                currentPage={studentFilters.pageNumber}
+                totalPages={Math.max(1, Math.ceil(totalStudents / studentFilters.pageSize || 1))}
+                onPageChange={(page) => {
+                    const next = { ...studentFilters, pageNumber: page };
+                    setStudentFilters(next);
+                    fetchStudents(next);
+                }}
+            />
 
             <Dialog
                 open={editOpen}

@@ -20,6 +20,7 @@ import { Plus, Users, Pencil, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import TableRowContextMenu from "@/components/TableRowContextMenu";
+import Pagination from "@/components/ui/pagination";
 
 interface Halaqa {
   id: string;
@@ -78,6 +79,8 @@ const CirclesPage = () => {
     useState<Halaqa | null>(null);
 
   const [form, setForm] = useState<HalaqaPayload>(emptyHalaqaPayload);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const axiosClient = useMemo(() => {
     const token = localStorage.getItem("token");
@@ -335,7 +338,7 @@ const CirclesPage = () => {
             </thead>
 
             <tbody>
-              {filteredCircles.map((circle) => (
+              {filteredCircles.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((circle) => (
                 <TableRowContextMenu
                   key={circle.id}
                   actions={[
@@ -410,6 +413,15 @@ const CirclesPage = () => {
           </table>
         </div>
       </div>
+
+        <div className="flex items-center justify-between gap-4 mt-3">
+          <div />
+          <Pagination
+            currentPage={pageNumber}
+            totalPages={Math.max(1, Math.ceil(filteredCircles.length / pageSize))}
+            onPageChange={(page) => setPageNumber(page)}
+          />
+        </div>
 
       <Dialog open={studentsOpen} onOpenChange={setStudentsOpen}>
         <DialogContent dir="rtl" className="font-tajawal max-w-3xl">

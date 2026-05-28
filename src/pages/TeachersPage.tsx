@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { toast } from "sonner";
+import Pagination from "@/components/ui/pagination";
 
 interface Teacher {
     id: string;
@@ -80,8 +81,9 @@ const TeachersPage = () => {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    const [teacherFilters] =
+    const [teacherFilters, setTeacherFilters] =
         useState<TeacherFilters>(defaultTeacherFilters);
+    const [totalTeachers, setTotalTeachers] = useState<number>(0);
 
     const [newTeacher, setNewTeacher] =
         useState<TeacherPayload>(emptyTeacherPayload);
@@ -149,9 +151,16 @@ const TeachersPage = () => {
 
             const normalizedTeachers = Array.isArray(response.data.data)
                 ? response.data.data
+                : Array.isArray(response.data)
+                ? response.data
                 : [];
 
             setTeachers(normalizedTeachers);
+            const total =
+                response.data?.totalCount ?? response.data?.total ?? response.data?.count ??
+                (Array.isArray(response.data.data) ? response.data.data.length : normalizedTeachers.length);
+
+            setTotalTeachers(Number(total) || 0);
 
         } catch (error) {
 
@@ -175,6 +184,7 @@ const TeachersPage = () => {
         fetchTeachers();
 
     }, []);
+
 
     // =========================
     // SEARCH
@@ -677,6 +687,16 @@ const TeachersPage = () => {
                 </div>
 
             </div>
+
+            <Pagination
+                currentPage={teacherFilters.pageNumber}
+                totalPages={Math.max(1, Math.ceil(totalTeachers / teacherFilters.pageSize || 1))}
+                onPageChange={(page) => {
+                    const next = { ...teacherFilters, pageNumber: page };
+                    setTeacherFilters(next);
+                    fetchTeachers(next);
+                }}
+            />
 
             <Dialog
                 open={editOpen}

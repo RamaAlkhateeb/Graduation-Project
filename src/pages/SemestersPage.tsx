@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import TableRowContextMenu from "@/components/TableRowContextMenu";
+import Pagination from "@/components/ui/pagination";
 
 interface Semester {
   id: string;
@@ -68,6 +69,8 @@ const SemestersPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<Semester | null>(null);
   const [relatedSemester, setRelatedSemester] = useState<Semester | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const [form, setForm] = useState<SemesterPayload>({
     name: "",
@@ -261,7 +264,7 @@ const SemestersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {semesters.map((semester) => {
+              {semesters.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((semester) => {
                 const hasDates = Boolean(semester.startDate && semester.endDate);
                 const status = hasDates
                   ? getStatus(semester.startDate as string, semester.endDate as string)
@@ -316,6 +319,15 @@ const SemestersPage = () => {
           </table>
         </div>
       </div>
+
+        <div className="flex items-center justify-between gap-4 mt-3">
+          <div />
+          <Pagination
+            currentPage={pageNumber}
+            totalPages={Math.max(1, Math.ceil(semesters.length / pageSize))}
+            onPageChange={(page) => setPageNumber(page)}
+          />
+        </div>
 
       <Dialog open={!!relatedSemester} onOpenChange={() => setRelatedSemester(null)}>
         <DialogContent dir="rtl" className="font-tajawal max-w-2xl">

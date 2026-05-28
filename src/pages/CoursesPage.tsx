@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, Pencil, Trash2, BookMarked } from "lucide-react";
 import { toast } from "sonner";
 import TableRowContextMenu from "@/components/TableRowContextMenu";
+import Pagination from "@/components/ui/pagination";
 
 interface Course {
     id: string;
@@ -63,6 +64,8 @@ const CoursesPage = () => {
     const [selected, setSelected] = useState<Course | null>(null);
     const [relatedCourse, setRelatedCourse] = useState<Course | null>(null);
     const [form, setForm] = useState<CoursePayload>(emptyCoursePayload);
+    const [pageNumber, setPageNumber] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number>(10);
 
     const axiosClient = useMemo(() => {
         const token = localStorage.getItem("token");
@@ -83,6 +86,8 @@ const CoursesPage = () => {
     const filteredCourses = courses.filter((course) =>
         (course.courseName ?? "").toLowerCase().includes(search.toLowerCase())
     );
+
+    const pagedCourses = filteredCourses.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
 
     const fetchSemesters = async () => {
         try {
@@ -265,7 +270,7 @@ const CoursesPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredCourses.map((course) => (
+                            {pagedCourses.map((course) => (
                                 <TableRowContextMenu
                                     key={course.id}
                                     actions={[
@@ -313,6 +318,17 @@ const CoursesPage = () => {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 mt-3">
+                <div />
+                <Pagination
+                    currentPage={pageNumber}
+                    totalPages={Math.max(1, Math.ceil(filteredCourses.length / pageSize))}
+                    onPageChange={(page) => {
+                        setPageNumber(page);
+                    }}
+                />
             </div>
 
             <Dialog open={!!relatedCourse} onOpenChange={() => setRelatedCourse(null)}>
