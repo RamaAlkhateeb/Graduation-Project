@@ -688,15 +688,20 @@ const TeachersPage = () => {
 
             </div>
 
-            <Pagination
-                currentPage={teacherFilters.pageNumber}
-                totalPages={Math.max(1, Math.ceil(totalTeachers / teacherFilters.pageSize || 1))}
-                onPageChange={(page) => {
-                    const next = { ...teacherFilters, pageNumber: page };
-                    setTeacherFilters(next);
-                    fetchTeachers(next);
-                }}
-            />
+            <div className="flex items-center justify-between gap-4 mt-3">
+                <div className="text-sm text-muted-foreground">
+                    إجمالي النتائج: {totalTeachers || teachers.length}
+                </div>
+                <Pagination
+                    currentPage={teacherFilters.pageNumber}
+                    totalPages={Math.max(1, Math.ceil(totalTeachers / teacherFilters.pageSize || 1))}
+                    onPageChange={(page) => {
+                        const next = { ...teacherFilters, pageNumber: page };
+                        setTeacherFilters(next);
+                        fetchTeachers(next);
+                    }}
+                />
+            </div>
 
             <Dialog
                 open={editOpen}

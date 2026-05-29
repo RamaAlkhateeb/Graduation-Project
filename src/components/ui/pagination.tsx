@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationProps {
     currentPage: number;
@@ -14,15 +15,16 @@ const range = (start: number, end: number) => {
 };
 
 const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
-    if (totalPages <= 1) return null;
+    const safeTotalPages = Math.max(1, totalPages);
+    const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
 
     const pages: (number | "...")[] = [];
 
-    if (totalPages <= 7) {
-        pages.push(...range(1, totalPages));
+    if (safeTotalPages <= 7) {
+        pages.push(...range(1, safeTotalPages));
     } else {
-        const left = Math.max(2, currentPage - 1);
-        const right = Math.min(totalPages - 1, currentPage + 1);
+        const left = Math.max(2, safeCurrentPage - 1);
+        const right = Math.min(safeTotalPages - 1, safeCurrentPage + 1);
 
         pages.push(1);
 
@@ -30,20 +32,21 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
 
         pages.push(...range(left, right));
 
-        if (right < totalPages - 1) pages.push("...");
+        if (right < safeTotalPages - 1) pages.push("...");
 
-        pages.push(totalPages);
+        pages.push(safeTotalPages);
     }
 
     return (
-        <div className="flex items-center justify-center gap-2 p-4">
+        <div className="flex items-center justify-center gap-2 p-4 rounded-lg border bg-background/60">
             <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                onClick={() => onPageChange(Math.max(1, safeCurrentPage - 1))}
+                disabled={safeCurrentPage === 1}
+                aria-label="الصفحة السابقة"
             >
-                السابق
+                <ChevronRight className="h-4 w-4" />
             </Button>
 
             {pages.map((p, idx) =>
@@ -55,7 +58,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
                     <Button
                         key={p}
                         size="sm"
-                        variant={p === currentPage ? "default" : "outline"}
+                        variant={p === safeCurrentPage ? "default" : "outline"}
                         onClick={() => onPageChange(Number(p))}
                     >
                         {p}
@@ -66,10 +69,11 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
             <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => onPageChange(Math.min(safeTotalPages, safeCurrentPage + 1))}
+                disabled={safeCurrentPage === safeTotalPages}
+                aria-label="الصفحة التالية"
             >
-                التالي
+                <ChevronLeft className="h-4 w-4" />
             </Button>
         </div>
     );

@@ -55,8 +55,10 @@ interface PagedResponse<T> {
     data?: T[];
     totalItems?: number;
     totalCount?: number;
+    total?: number;
     count?: number;
     totalPages?: number;
+    pageCount?: number;
     page?: number;
     pageSize?: number;
 }
@@ -117,6 +119,20 @@ const defaultStudentFilters: StudentFilters = {
     semesterId: "",
     courseId: "",
     teacherId: "",
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+const pickNumber = (...values: unknown[]): number | undefined => {
+    for (const value of values) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+            return parsed;
+        }
+    }
+
+    return undefined;
 };
 
 const StudentsPage = () => {
@@ -181,14 +197,80 @@ const StudentsPage = () => {
         return data.items ?? [];
     };
 
-    const normalizeStudents = (data: Student[] | PagedResponse<Student>) => {
+    const normalizeStudents = (data: unknown): Student[] => {
         if (Array.isArray(data)) {
-            return data.filter((student): student is Student => Boolean(student?.id));
+            return data.filter((student): student is Student => Boolean((student as Student | undefined)?.id));
         }
 
-        const collection = data.items ?? (data as { data?: Student[] }).data ?? [];
+        if (!isRecord(data)) {
+            return [];
+        }
 
-        return collection.filter((student): student is Student => Boolean(student?.id));
+        const candidates: unknown[] = [
+            data.items,
+            data.data,
+            data.results,
+            data.records,
+            data.value,
+            data.payload,
+            data.result,
+        ];
+
+        for (const candidate of candidates) {
+            if (Array.isArray(candidate)) {
+                return candidate.filter((student): student is Student => Boolean((student as Student | undefined)?.id));
+            }
+
+            if (isRecord(candidate)) {
+                const nested = normalizeStudents(candidate);
+                if (nested.length > 0) {
+                    return nested;
+                }
+            }
+        }
+
+        return [];
+    };
+
+    const extractStudentPageMeta = (data: unknown, fallbackItemsCount: number, pageSize: number) => {
+        const root = isRecord(data) ? data : undefined;
+        const level1 = root?.data;
+        const level2 = isRecord(level1) ? level1.data : undefined;
+
+        const candidates = [
+            root,
+            isRecord(root?.result) ? root.result : undefined,
+            isRecord(root?.payload) ? root.payload : undefined,
+            isRecord(root?.value) ? root.value : undefined,
+            isRecord(level1) ? level1 : undefined,
+            isRecord(level2) ? level2 : undefined,
+        ].filter(Boolean) as Record<string, unknown>[];
+
+        const totalItems =
+            candidates
+                .map((candidate) =>
+                    pickNumber(
+                        candidate.totalItems,
+                        candidate.totalCount,
+                        candidate.total,
+                        candidate.count,
+                        candidate.recordsTotal
+                    )
+                )
+                .find((value) => value !== undefined) ?? fallbackItemsCount;
+
+        const explicitTotalPages = candidates
+            .map((candidate) => pickNumber(candidate.totalPages, candidate.pageCount, candidate.pages))
+            .find((value) => value !== undefined);
+
+        const totalPages =
+            explicitTotalPages ??
+            (pageSize > 0 ? Math.ceil(totalItems / pageSize) : 1);
+
+        return {
+            totalItems,
+            totalPages,
+        };
     };
 
     const normalizeRowValue = (value: unknown) =>
@@ -416,19 +498,11 @@ const StudentsPage = () => {
                 params: buildStudentParams(filters),
             });
 
-            setStudents(normalizeStudents(response.data));
-            setStudentPageMeta({
-                totalItems:
-                    response.data && !Array.isArray(response.data)
-                        ? Number(response.data.totalItems ?? response.data.totalCount ?? response.data.count ?? 0)
-                        : Array.isArray(response.data)
-                        ? response.data.length
-                        : 0,
-                totalPages:
-                    response.data && !Array.isArray(response.data)
-                        ? Number(response.data.totalPages ?? 0)
-                        : 0,
-            });
+            const normalizedStudents = normalizeStudents(response.data);
+            setStudents(normalizedStudents);
+            setStudentPageMeta(
+                extractStudentPageMeta(response.data, normalizedStudents.length, filters.pageSize)
+            );
         } catch (error) {
             console.error(error);
             toast.error("تعذر تحميل بيانات الطلاب");
@@ -931,18 +1005,23 @@ const StudentsPage = () => {
                 </div>
             </div>
 
-            <Pagination
-                currentPage={studentFilters.pageNumber}
-                totalPages={Math.max(
-                    1,
-                    studentPageMeta.totalPages || Math.ceil((studentPageMeta.totalItems || students.length) / studentFilters.pageSize)
-                )}
-                onPageChange={(page) => {
-                    const next = { ...studentFilters, pageNumber: page };
-                    setStudentFilters(next);
-                    fetchStudents(next);
-                }}
-            />
+            <div className="flex items-center justify-between gap-4 mt-3">
+                <div className="text-sm text-muted-foreground">
+                    إجمالي النتائج: {studentPageMeta.totalItems || students.length}
+                </div>
+                <Pagination
+                    currentPage={studentFilters.pageNumber}
+                    totalPages={Math.max(
+                        1,
+                        studentPageMeta.totalPages || Math.ceil((studentPageMeta.totalItems || students.length) / studentFilters.pageSize)
+                    )}
+                    onPageChange={(page) => {
+                        const next = { ...studentFilters, pageNumber: page };
+                        setStudentFilters(next);
+                        fetchStudents(next);
+                    }}
+                />
+            </div>
 
             <Dialog
                 open={editOpen}
