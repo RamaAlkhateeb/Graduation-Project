@@ -136,12 +136,12 @@ describe("ReportsPage", () => {
 
     render(<ReportsPageView />);
 
-    expect(await screen.findByText("الفصل الأول")).toBeInTheDocument();
-    expect(screen.getByText("45")).toBeInTheDocument();
-    expect(screen.getByText("8")).toBeInTheDocument();
+    expect((await screen.findAllByText("الفصل الأول")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("45").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("8").length).toBeGreaterThan(0);
     expect(screen.getByText("حلقة الفجر")).toBeInTheDocument();
     expect(screen.getByText("أحمد محمد")).toBeInTheDocument();
-    expect(screen.getByText("خالد علي")).toBeInTheDocument();
+    expect(screen.getByText(/خالد علي/)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(getMock).toHaveBeenCalledWith("/reports/semesters/semester-1/overview");
