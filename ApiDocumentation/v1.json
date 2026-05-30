@@ -3819,6 +3819,154 @@
         ]
       }
     },
+    "/api/students/{id}/academic-stage": {
+      "get": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Get Student Academic Stage",
+        "description": "Retrieves the assigned academic stage for the specified student.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "put": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Update Student Academic Stage",
+        "description": "Updates the assigned academic stage for the specified student.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentAcademicStageDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentAcademicStageDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentAcademicStageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
+    "/api/students/{id}/memorized-quran-parts": {
+      "get": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Get Student Memorized Quran Parts",
+        "description": "Retrieves the memorized Quran parts assigned to the specified student.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "put": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Update Student Memorized Quran Parts",
+        "description": "Replaces the memorized Quran parts assigned to the specified student.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentMemorizedQuranPartsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentMemorizedQuranPartsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentMemorizedQuranPartsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
     "/api/students/{id}/memorization": {
       "get": {
         "tags": [
@@ -8090,6 +8238,158 @@
         ]
       }
     },
+    "/api/academic-stages": {
+      "get": {
+        "tags": [
+          "AcademicStages"
+        ],
+        "summary": "Get All Academic Stages",
+        "description": "Retrieves all available academic stages ordered by grade.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "post": {
+        "tags": [
+          "AcademicStages"
+        ],
+        "summary": "Create Academic Stage",
+        "description": "Creates a new academic stage lookup value.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicStageDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicStageDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicStageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
+    "/api/academic-stages/{id}": {
+      "get": {
+        "tags": [
+          "AcademicStages"
+        ],
+        "summary": "Get Academic Stage by ID",
+        "description": "Retrieves a specific academic stage by its unique identifier.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "put": {
+        "tags": [
+          "AcademicStages"
+        ],
+        "summary": "Update Academic Stage",
+        "description": "Updates an existing academic stage lookup value.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicStageDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicStageDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicStageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "delete": {
+        "tags": [
+          "AcademicStages"
+        ],
+        "summary": "Delete Academic Stage",
+        "description": "Deletes an academic stage lookup value.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
     "/api/courses": {
       "get": {
         "tags": [
@@ -8449,10 +8749,165 @@
           {}
         ]
       }
+    },
+    "/api/memorized-quran-parts": {
+      "get": {
+        "tags": [
+          "MemorizedQuranParts"
+        ],
+        "summary": "Get All Memorized Quran Parts",
+        "description": "Retrieves all available memorized Quran part lookup values ordered by part number.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "post": {
+        "tags": [
+          "MemorizedQuranParts"
+        ],
+        "summary": "Create Memorized Quran Part",
+        "description": "Creates a new memorized Quran part lookup value.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemorizedQuranPartsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemorizedQuranPartsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemorizedQuranPartsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
+    "/api/memorized-quran-parts/{id}": {
+      "get": {
+        "tags": [
+          "MemorizedQuranParts"
+        ],
+        "summary": "Get Memorized Quran Part by ID",
+        "description": "Retrieves a specific memorized Quran part lookup value by its unique identifier.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "put": {
+        "tags": [
+          "MemorizedQuranParts"
+        ],
+        "summary": "Update Memorized Quran Part",
+        "description": "Updates an existing memorized Quran part lookup value.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizedQuranPartsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizedQuranPartsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizedQuranPartsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      },
+      "delete": {
+        "tags": [
+          "MemorizedQuranParts"
+        ],
+        "summary": "Delete Memorized Quran Part",
+        "description": "Deletes a memorized Quran part lookup value.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcademicStageGrade": {
+        "type": "integer"
+      },
       "AddStudentAssessmentDto": {
         "required": [
           "studentId",
@@ -9034,6 +9489,17 @@
           }
         }
       },
+      "CreateAcademicStageDto": {
+        "required": [
+          "grade"
+        ],
+        "type": "object",
+        "properties": {
+          "grade": {
+            "$ref": "#/components/schemas/AcademicStageGrade"
+          }
+        }
+      },
       "CreateAllowableExtensionDto": {
         "required": [
           "extName"
@@ -9383,6 +9849,17 @@
           },
           "password": {
             "type": "string"
+          }
+        }
+      },
+      "CreateMemorizedQuranPartsDto": {
+        "required": [
+          "memorizedQuranPart"
+        ],
+        "type": "object",
+        "properties": {
+          "memorizedQuranPart": {
+            "$ref": "#/components/schemas/MemorizedQuranPart"
           }
         }
       },
@@ -10193,6 +10670,9 @@
             "type": "string"
           }
         }
+      },
+      "MemorizedQuranPart": {
+        "type": "integer"
       },
       "PagedListOfAllowableExtensionDto": {
         "required": [
@@ -13224,6 +13704,17 @@
           }
         }
       },
+      "UpdateAcademicStageDto": {
+        "required": [
+          "grade"
+        ],
+        "type": "object",
+        "properties": {
+          "grade": {
+            "$ref": "#/components/schemas/AcademicStageGrade"
+          }
+        }
+      },
       "UpdateAllowableExtensionDto": {
         "required": [
           "extName"
@@ -13524,6 +14015,17 @@
           }
         }
       },
+      "UpdateMemorizedQuranPartsDto": {
+        "required": [
+          "memorizedQuranPart"
+        ],
+        "type": "object",
+        "properties": {
+          "memorizedQuranPart": {
+            "$ref": "#/components/schemas/MemorizedQuranPart"
+          }
+        }
+      },
       "UpdatePasswordDto": {
         "required": [
           "newPassword"
@@ -13614,6 +14116,18 @@
           }
         }
       },
+      "UpdateStudentAcademicStageDto": {
+        "required": [
+          "academicStageId"
+        ],
+        "type": "object",
+        "properties": {
+          "academicStageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "UpdateStudentAttendanceDto": {
         "required": [
           "startDate",
@@ -13687,6 +14201,21 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "UpdateStudentMemorizedQuranPartsDto": {
+        "required": [
+          "memorizedQuranPartIds"
+        ],
+        "type": "object",
+        "properties": {
+          "memorizedQuranPartIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -13891,10 +14420,16 @@
       "name": "FormResponses"
     },
     {
+      "name": "AcademicStages"
+    },
+    {
       "name": "Courses"
     },
     {
       "name": "Halaqas"
+    },
+    {
+      "name": "MemorizedQuranParts"
     }
   ]
 }
