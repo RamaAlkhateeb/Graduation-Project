@@ -3253,7 +3253,24 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfTeacherDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfTeacherDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfTeacherDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4074,7 +4091,24 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfStudentListItemDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfStudentListItemDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedListOfStudentListItemDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4130,17 +4164,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateStudentDto"
+                "$ref": "#/components/schemas/UpdateStudentCommand"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateStudentDto"
+                "$ref": "#/components/schemas/UpdateStudentCommand"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateStudentDto"
+                "$ref": "#/components/schemas/UpdateStudentCommand"
               }
             }
           },
@@ -4193,17 +4227,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateStudentDto"
+                "$ref": "#/components/schemas/CreateStudentCommand"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateStudentDto"
+                "$ref": "#/components/schemas/CreateStudentCommand"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateStudentDto"
+                "$ref": "#/components/schemas/CreateStudentCommand"
               }
             }
           },
@@ -5507,26 +5541,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StudentPointsDetailDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfStudentPointsDetailDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StudentPointsDetailDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfStudentPointsDetailDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StudentPointsDetailDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfStudentPointsDetailDto"
                 }
               }
             }
@@ -5573,26 +5598,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TeacherPointsGivenDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfTeacherPointsGivenDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TeacherPointsGivenDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfTeacherPointsGivenDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TeacherPointsGivenDto"
-                  }
+                  "$ref": "#/components/schemas/PagedListOfTeacherPointsGivenDto"
                 }
               }
             }
@@ -9491,13 +9507,20 @@
           }
         }
       },
-      "CreateStudentDto": {
+      "CreateStudentCommand": {
         "required": [
           "name",
           "fatherName",
-          "motherName",
-          "nationalityNumber",
-          "email"
+          "lastName",
+          "fatherWork",
+          "parentPhoneNumber",
+          "schoolName",
+          "parentWhatsAppPhoneNumber",
+          "dateOfBirth",
+          "landlineNumber",
+          "userName",
+          "academicStageId",
+          "password"
         ],
         "type": "object",
         "properties": {
@@ -9507,13 +9530,39 @@
           "fatherName": {
             "type": "string"
           },
-          "motherName": {
+          "lastName": {
             "type": "string"
           },
-          "nationalityNumber": {
+          "fatherWork": {
             "type": "string"
           },
-          "email": {
+          "parentPhoneNumber": {
+            "type": "string"
+          },
+          "schoolName": {
+            "type": "string"
+          },
+          "parentWhatsAppPhoneNumber": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "landlineNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userName": {
+            "type": "string"
+          },
+          "academicStageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "password": {
             "type": "string"
           }
         }
@@ -10733,6 +10782,55 @@
           }
         }
       },
+      "PagedListOfStudentListItemDto": {
+        "required": [
+          "items",
+          "totalItems",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentListItemDto"
+            }
+          },
+          "totalItems": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalPages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PagedListOfStudentPointsDetailDto": {
         "required": [
           "items",
@@ -10893,6 +10991,55 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TeacherAttendanceDto"
+            }
+          },
+          "totalItems": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalPages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PagedListOfTeacherDto": {
+        "required": [
+          "items",
+          "totalItems",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherDto"
             }
           },
           "totalItems": {
@@ -11873,6 +12020,58 @@
           }
         }
       },
+      "StudentListItemDto": {
+        "required": [
+          "id",
+          "name",
+          "fatherName",
+          "motherName",
+          "nationalityNumber",
+          "email",
+          "userName",
+          "roleType"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fatherName": {
+            "type": "string"
+          },
+          "motherName": {
+            "type": "string"
+          },
+          "nationalityNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roleType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "StudentMemorizationRecordDto": {
         "required": [
           "studentId",
@@ -12418,6 +12617,23 @@
           }
         }
       },
+      "TeacherAttachmentDto": {
+        "required": [
+          "teacherId",
+          "attachmentId"
+        ],
+        "type": "object",
+        "properties": {
+          "teacherId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "TeacherAttendanceDetailDto": {
         "required": [
           "teacherId",
@@ -12537,6 +12753,23 @@
           }
         }
       },
+      "TeacherContactInfoDto": {
+        "required": [
+          "teacherId",
+          "contactInfoId"
+        ],
+        "type": "object",
+        "properties": {
+          "teacherId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactInfoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "TeacherDailyReportDto": {
         "required": [
           "teacherId",
@@ -12569,6 +12802,89 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/StudentProgressUnderTeacherDto"
+            }
+          }
+        }
+      },
+      "TeacherDto": {
+        "required": [
+          "id",
+          "name",
+          "fatherName",
+          "motherName",
+          "nationalityNumber",
+          "email",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fatherName": {
+            "type": "string"
+          },
+          "motherName": {
+            "type": "string"
+          },
+          "nationalityNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            ]
+          },
+          "teacherContactInfos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TeacherContactInfoDto"
+            }
+          },
+          "teacherAttachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TeacherAttachmentDto"
+            }
+          },
+          "classTeacherEnrollments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ClassTeacherEnrollmentDto"
             }
           }
         }
@@ -13320,9 +13636,16 @@
           }
         }
       },
-      "UpdateStudentDto": {
+      "UpdateStudentCommand": {
+        "required": [
+          "id"
+        ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "name": {
             "type": [
               "null",
@@ -13433,6 +13756,30 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "UserDto": {
+        "required": [
+          "id",
+          "userName",
+          "roleId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       }
