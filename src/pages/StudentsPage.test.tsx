@@ -1,11 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import * as XLSX from "xlsx";
 
+const writeFileMock = vi.hoisted(() => vi.fn());
 const getMock = vi.fn();
 const postMock = vi.fn();
 const putMock = vi.fn();
 const deleteMock = vi.fn();
+
+vi.mock("xlsx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("xlsx")>();
+
+  return {
+    ...actual,
+    writeFile: writeFileMock,
+  };
+});
 
 vi.mock("axios", () => ({
   default: {
@@ -114,6 +125,7 @@ describe("StudentsPage", () => {
     postMock.mockReset();
     putMock.mockReset();
     deleteMock.mockReset();
+    writeFileMock.mockReset();
     localStorage.clear();
     localStorage.setItem("token", "test-token");
 
@@ -180,13 +192,147 @@ describe("StudentsPage", () => {
         parentPhoneNumber: "0988888888",
         schoolName: "مدرسة السلام",
         parentWhatsAppPhoneNumber: "0988888888",
-        dateOfBirth: "2015-02-02",
+        dateOfBirth: "2015-02-02T00:00:00.000Z",
         landlineNumber: "0112222222",
         userName: "sara",
         password: "secret",
         academicStageId: "stage-1",
       });
     });
+  });
+
+  it("imports Excel students with the same normalized create payload", async () => {
+    const { container } = renderStudentsPage();
+
+    await screen.findByText("أحمد");
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [
+        "name",
+        "fatherName",
+        "lastName",
+        "fatherWork",
+        "parentPhoneNumber",
+        "schoolName",
+        "parentWhatsAppPhoneNumber",
+        "dateOfBirth",
+        "landlineNumber",
+        "academicStage",
+        "userName",
+        "password",
+      ],
+      [
+        "سارة",
+        "علي",
+        "العمر",
+        "مهندس",
+        "0988888888",
+        "مدرسة السلام",
+        "0988888888",
+        "2/2/15",
+        "",
+        "الصف الأول",
+        "sara",
+        "secret",
+      ],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "StudentsTemplate");
+    const workbookData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new File([workbookData], "students.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: () => Promise.resolve(workbookData),
+    });
+
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(input).toBeInTheDocument();
+    fireEvent.change(input!, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(postMock).toHaveBeenCalledWith("/students", {
+        name: "سارة",
+        fatherName: "علي",
+        lastName: "العمر",
+        fatherWork: "مهندس",
+        parentPhoneNumber: "0988888888",
+        schoolName: "مدرسة السلام",
+        parentWhatsAppPhoneNumber: "0988888888",
+        dateOfBirth: "2015-02-02T00:00:00.000Z",
+        landlineNumber: null,
+        userName: "sara",
+        password: "secret",
+        academicStageId: "stage-1",
+      });
+    });
+  });
+
+  it("downloads an Excel error report with highlighted invalid cells", async () => {
+    const { container } = renderStudentsPage();
+
+    await screen.findByText("أحمد");
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [
+        "name",
+        "fatherName",
+        "lastName",
+        "fatherWork",
+        "parentPhoneNumber",
+        "schoolName",
+        "parentWhatsAppPhoneNumber",
+        "dateOfBirth",
+        "landlineNumber",
+        "academicStage",
+        "userName",
+        "password",
+      ],
+      [
+        "",
+        "علي",
+        "العمر",
+        "مهندس",
+        "0988888888",
+        "مدرسة السلام",
+        "0988888888",
+        "تاريخ غير صالح",
+        "",
+        "الصف الأول",
+        "sara",
+        "secret",
+      ],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "StudentsTemplate");
+    const workbookData = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new File([workbookData], "students.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: () => Promise.resolve(workbookData),
+    });
+
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(writeFileMock).toHaveBeenCalledWith(
+        expect.any(Object),
+        "students-import-errors.xlsx",
+        { cellStyles: true }
+      );
+    });
+
+    const reportWorkbook = writeFileMock.mock.calls[0][0] as XLSX.WorkBook;
+    const reportWorksheet = reportWorkbook.Sheets.StudentsTemplate;
+
+    expect(postMock).not.toHaveBeenCalled();
+    expect(reportWorksheet.A2.s).toBeDefined();
+    expect(reportWorksheet.H2.s).toBeDefined();
+    expect(reportWorksheet.M1.v).toBe("أخطاء الاستيراد");
+    expect(reportWorksheet.M2.v).toContain("الاسم مطلوب");
+    expect(reportWorksheet.M2.v).toContain("تاريخ الميلاد غير صالح");
   });
 
   it("updates basic student info without memorized parts or credentials", async () => {

@@ -135,6 +135,11 @@ type CreateOnlyField = {
 
 type StudentFieldKey = keyof CreateStudentRequest | keyof UpdateStudentRequest;
 type StudentFormErrors = Partial<Record<StudentFieldKey, string>>;
+type ExcelImportIssue = {
+    rowIndex: number;
+    field?: StudentFieldKey;
+    message: string;
+};
 
 const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
@@ -195,6 +200,21 @@ const fieldLabels: Record<StudentFieldKey, string> = {
     academicStageId: "المرحلة الدراسية",
 };
 
+const excelStudentFieldAliases: Record<keyof CreateStudentRequest, string[]> = {
+    name: ["name", "student name", "studentname", "full name", "الاسم", "اسم الطالب"],
+    fatherName: ["fatherName", "father name", "father", "اسم الأب", "اسم الاب"],
+    lastName: ["lastName", "last name", "family name", "الكنية", "النسبة"],
+    fatherWork: ["fatherWork", "father work", "عمل الأب", "عمل الاب"],
+    parentPhoneNumber: ["parentPhoneNumber", "parent phone number", "parent phone", "هاتف ولي الأمر", "رقم ولي الأمر"],
+    schoolName: ["schoolName", "school name", "school", "اسم المدرسة", "المدرسة"],
+    parentWhatsAppPhoneNumber: ["parentWhatsAppPhoneNumber", "parent whatsapp phone number", "whatsapp", "واتساب ولي الأمر"],
+    dateOfBirth: ["dateOfBirth", "date of birth", "birth date", "تاريخ الميلاد"],
+    landlineNumber: ["landlineNumber", "landline number", "landline", "الهاتف الأرضي"],
+    userName: ["userName", "username", "user name", "اسم المستخدم"],
+    password: ["password", "كلمة المرور"],
+    academicStageId: ["academicStageId", "academic stage id", "academicStage", "academic stage", "المرحلة الدراسية"],
+};
+
 const requiredCreateFields: StudentFieldKey[] = [
     "name",
     "fatherName",
@@ -243,11 +263,73 @@ const trimText = (value: unknown) => textValue(value).trim();
 const normalizeComparable = (value: unknown) =>
     trimText(value).toLowerCase().replace(/\s+/g, "");
 
-const normalizeDateInput = (value: unknown) => trimText(value).slice(0, 10);
+const formatDateInput = (date: Date) => date.toISOString();
+
+const buildUtcDate = (year: number, month: number, day: number) => {
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    return date.getUTCFullYear() === year &&
+        date.getUTCMonth() === month - 1 &&
+        date.getUTCDate() === day
+        ? date
+        : null;
+};
+
+const parseTwoDigitYear = (year: number) => {
+    if (year >= 100) {
+        return year;
+    }
+
+    return year >= 50 ? 1900 + year : 2000 + year;
+};
+
+const parseDateInput = (value: unknown) => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value;
+    }
+
+    const text = trimText(value);
+
+    if (!text) {
+        return null;
+    }
+
+    const isoDate = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoDate) {
+        return buildUtcDate(Number(isoDate[1]), Number(isoDate[2]), Number(isoDate[3]));
+    }
+
+    const slashDate = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+    if (slashDate) {
+        const first = Number(slashDate[1]);
+        const second = Number(slashDate[2]);
+        const year = parseTwoDigitYear(Number(slashDate[3]));
+        const [month, day] = first > 12 && second <= 12 ? [second, first] : [first, second];
+
+        return buildUtcDate(
+            year,
+            month,
+            day
+        );
+    }
+
+    const parsed = new Date(text);
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const normalizeDateInput = (value: unknown) => {
+    const parsed = parseDateInput(value);
+    return parsed ? formatDateInput(parsed) : "";
+};
+
+const formatDateFieldValue = (value: unknown) => {
+    const parsed = parseDateInput(value);
+    return parsed ? parsed.toISOString().slice(0, 10) : trimText(value);
+};
 
 const isValidDate = (value: unknown) => {
-    const date = trimText(value);
-    return Boolean(date) && !Number.isNaN(new Date(date).getTime());
+    return Boolean(parseDateInput(value));
 };
 
 const toStudentDetail = (student: Partial<StudentDetailDto> & { id: string }): StudentDetailDto => ({
@@ -549,18 +631,22 @@ const StudentsPage = () => {
     };
 
     const buildCreatePayload = (): CreateStudentRequest => ({
-        name: trimText(newStudent.name),
-        fatherName: trimText(newStudent.fatherName),
-        lastName: trimText(newStudent.lastName),
-        fatherWork: trimText(newStudent.fatherWork),
-        parentPhoneNumber: trimText(newStudent.parentPhoneNumber),
-        schoolName: trimText(newStudent.schoolName),
-        parentWhatsAppPhoneNumber: trimText(newStudent.parentWhatsAppPhoneNumber),
-        dateOfBirth: normalizeDateInput(newStudent.dateOfBirth),
-        landlineNumber: trimText(newStudent.landlineNumber) || null,
-        userName: trimText(newStudent.userName),
-        password: trimText(newStudent.password),
-        academicStageId: trimText(newStudent.academicStageId),
+        ...buildNormalizedCreatePayload(newStudent),
+    });
+
+    const buildNormalizedCreatePayload = (payload: CreateStudentRequest): CreateStudentRequest => ({
+        name: trimText(payload.name),
+        fatherName: trimText(payload.fatherName),
+        lastName: trimText(payload.lastName),
+        fatherWork: trimText(payload.fatherWork),
+        parentPhoneNumber: trimText(payload.parentPhoneNumber),
+        schoolName: trimText(payload.schoolName),
+        parentWhatsAppPhoneNumber: trimText(payload.parentWhatsAppPhoneNumber),
+        dateOfBirth: normalizeDateInput(payload.dateOfBirth),
+        landlineNumber: trimText(payload.landlineNumber) || null,
+        userName: trimText(payload.userName),
+        password: trimText(payload.password),
+        academicStageId: trimText(payload.academicStageId),
     });
 
     const buildUpdatePayload = (student: StudentDetailDto): UpdateStudentRequest => ({
@@ -597,6 +683,106 @@ const StudentsPage = () => {
         return "";
     };
 
+    const getExcelHeaderColumns = (worksheet: XLSX.WorkSheet) => {
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+            header: 1,
+            blankrows: false,
+            defval: "",
+        });
+        const headers = rows[0] ?? [];
+        const columns = new Map<StudentFieldKey, number>();
+
+        headers.forEach((header, index) => {
+            const normalizedHeader = normalizeHeaderKey(textValue(header));
+            const matchedField = Object.entries(excelStudentFieldAliases).find(([, aliases]) =>
+                aliases.some((alias) => normalizeHeaderKey(alias) === normalizedHeader)
+            )?.[0] as StudentFieldKey | undefined;
+
+            if (matchedField && !columns.has(matchedField)) {
+                columns.set(matchedField, index);
+            }
+        });
+
+        return columns;
+    };
+
+    const markExcelErrorCell = (worksheet: XLSX.WorkSheet, rowIndex: number, columnIndex: number, message: string) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+        const cell = worksheet[cellAddress] ?? { t: "s", v: "" };
+
+        cell.s = {
+            fill: {
+                patternType: "solid",
+                fgColor: { rgb: "FCA5A5" },
+            },
+        };
+        cell.c = [
+            {
+                a: "Alashmar",
+                t: message,
+            },
+        ];
+        worksheet[cellAddress] = cell;
+    };
+
+    const downloadExcelImportErrors = (
+        workbook: XLSX.WorkBook,
+        worksheet: XLSX.WorkSheet,
+        sheetName: string,
+        issues: ExcelImportIssue[],
+        sourceFileName: string
+    ) => {
+        if (issues.length === 0) {
+            return;
+        }
+
+        const range = XLSX.utils.decode_range(worksheet["!ref"] ?? "A1:A1");
+        const errorColumnIndex = range.e.c + 1;
+        const errorHeaderAddress = XLSX.utils.encode_cell({ r: 0, c: errorColumnIndex });
+        const headerColumns = getExcelHeaderColumns(worksheet);
+        const issuesByRow = issues.reduce<Record<number, ExcelImportIssue[]>>((acc, issue) => {
+            acc[issue.rowIndex] = [...(acc[issue.rowIndex] ?? []), issue];
+            return acc;
+        }, {});
+
+        worksheet[errorHeaderAddress] = { t: "s", v: "أخطاء الاستيراد" };
+        markExcelErrorCell(worksheet, 0, errorColumnIndex, "هذا العمود يحتوي ملخص أخطاء كل صف");
+
+        Object.entries(issuesByRow).forEach(([rowIndexText, rowIssues]) => {
+            const rowIndex = Number(rowIndexText);
+            const message = rowIssues.map((issue) => issue.message).join(" | ");
+            const errorCellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: errorColumnIndex });
+
+            worksheet[errorCellAddress] = { t: "s", v: message };
+            markExcelErrorCell(worksheet, rowIndex, errorColumnIndex, message);
+
+            rowIssues.forEach((issue) => {
+                if (!issue.field) {
+                    return;
+                }
+
+                const columnIndex = headerColumns.get(issue.field);
+                if (columnIndex !== undefined) {
+                    markExcelErrorCell(worksheet, rowIndex, columnIndex, issue.message);
+                }
+            });
+        });
+
+        worksheet["!ref"] = XLSX.utils.encode_range({
+            s: range.s,
+            e: {
+                r: Math.max(range.e.r, ...issues.map((issue) => issue.rowIndex)),
+                c: errorColumnIndex,
+            },
+        });
+
+        XLSX.writeFile(
+            workbook,
+            `${sourceFileName.replace(/\.(xlsx|xls)$/i, "")}-import-errors.xlsx`,
+            { cellStyles: true }
+        );
+    };
+
     const findAcademicStageIdFromRow = (value: string) => {
         if (!value) {
             return "";
@@ -612,32 +798,44 @@ const StudentsPage = () => {
         return matchedStage?.id ?? value;
     };
 
-    const buildStudentPayloadFromRow = (row: ExcelStudentRow): CreateStudentRequest | null => {
-        const academicStageValue = getExcelValue(row, [
-            "academicStageId",
-            "academic stage id",
-            "academicStage",
-            "academic stage",
-            "المرحلة الدراسية",
-        ]);
+    const buildStudentPayloadFromRow = (
+        row: ExcelStudentRow,
+        rowIndex: number
+    ): { payload: CreateStudentRequest | null; issues: ExcelImportIssue[] } => {
+        const academicStageValue = getExcelValue(row, excelStudentFieldAliases.academicStageId);
 
-        const payload: CreateStudentRequest = {
-            name: getExcelValue(row, ["name", "student name", "studentname", "full name", "الاسم", "اسم الطالب"]),
-            fatherName: getExcelValue(row, ["fatherName", "father name", "father", "اسم الأب", "اسم الاب"]),
-            lastName: getExcelValue(row, ["lastName", "last name", "family name", "الكنية", "النسبة"]),
-            fatherWork: getExcelValue(row, ["fatherWork", "father work", "عمل الأب", "عمل الاب"]),
-            parentPhoneNumber: getExcelValue(row, ["parentPhoneNumber", "parent phone number", "parent phone", "هاتف ولي الأمر", "رقم ولي الأمر"]),
-            schoolName: getExcelValue(row, ["schoolName", "school name", "school", "اسم المدرسة", "المدرسة"]),
-            parentWhatsAppPhoneNumber: getExcelValue(row, ["parentWhatsAppPhoneNumber", "parent whatsapp phone number", "whatsapp", "واتساب ولي الأمر"]),
-            dateOfBirth: normalizeDateInput(getExcelValue(row, ["dateOfBirth", "date of birth", "birth date", "تاريخ الميلاد"])),
-            landlineNumber: getExcelValue(row, ["landlineNumber", "landline number", "landline", "الهاتف الأرضي"]),
-            userName: getExcelValue(row, ["userName", "username", "user name", "اسم المستخدم"]),
-            password: getExcelValue(row, ["password", "كلمة المرور"]),
+        const dateOfBirthValue = getExcelValue(row, excelStudentFieldAliases.dateOfBirth);
+        const payload = buildNormalizedCreatePayload({
+            name: getExcelValue(row, excelStudentFieldAliases.name),
+            fatherName: getExcelValue(row, excelStudentFieldAliases.fatherName),
+            lastName: getExcelValue(row, excelStudentFieldAliases.lastName),
+            fatherWork: getExcelValue(row, excelStudentFieldAliases.fatherWork),
+            parentPhoneNumber: getExcelValue(row, excelStudentFieldAliases.parentPhoneNumber),
+            schoolName: getExcelValue(row, excelStudentFieldAliases.schoolName),
+            parentWhatsAppPhoneNumber: getExcelValue(row, excelStudentFieldAliases.parentWhatsAppPhoneNumber),
+            dateOfBirth: dateOfBirthValue,
+            landlineNumber: getExcelValue(row, excelStudentFieldAliases.landlineNumber),
+            userName: getExcelValue(row, excelStudentFieldAliases.userName),
+            password: getExcelValue(row, excelStudentFieldAliases.password),
             academicStageId: findAcademicStageIdFromRow(academicStageValue),
-        };
+        });
 
         const errors = validateStudentForm(payload, requiredCreateFields);
-        return Object.keys(errors).length === 0 ? payload : null;
+
+        if (trimText(dateOfBirthValue) && !parseDateInput(dateOfBirthValue)) {
+            errors.dateOfBirth = "تاريخ الميلاد غير صالح";
+        }
+
+        const issues = Object.entries(errors).map(([field, message]) => ({
+            rowIndex,
+            field: field as StudentFieldKey,
+            message: message ?? "قيمة غير صالحة",
+        }));
+
+        return {
+            payload: issues.length === 0 ? payload : null,
+            issues,
+        };
     };
 
     const handleExcelImportClick = () => {
@@ -700,7 +898,7 @@ const StudentsPage = () => {
             setBulkImportLoading(true);
 
             const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, { type: "array" });
+            const workbook = XLSX.read(buffer, { type: "array", cellStyles: true });
             const sheetName = workbook.SheetNames[0];
 
             if (!sheetName) {
@@ -722,12 +920,15 @@ const StudentsPage = () => {
             let createdCount = 0;
             let skippedCount = 0;
             let failedCount = 0;
+            const importIssues: ExcelImportIssue[] = [];
 
-            for (const row of rows) {
-                const payload = buildStudentPayloadFromRow(row);
+            for (const [index, row] of rows.entries()) {
+                const rowIndex = index + 1;
+                const { payload, issues } = buildStudentPayloadFromRow(row, rowIndex);
 
                 if (!payload) {
                     skippedCount += 1;
+                    importIssues.push(...issues);
                     continue;
                 }
 
@@ -736,8 +937,16 @@ const StudentsPage = () => {
                     createdCount += 1;
                 } catch (error) {
                     failedCount += 1;
+                    importIssues.push({
+                        rowIndex,
+                        message: getApiErrorMessage(error, "فشل إنشاء الطالب من هذا الصف"),
+                    });
                     console.error(error);
                 }
+            }
+
+            if (importIssues.length > 0) {
+                downloadExcelImportErrors(workbook, worksheet, sheetName, importIssues, file.name);
             }
 
             await fetchStudents(studentFilters);
@@ -747,11 +956,11 @@ const StudentsPage = () => {
             }
 
             if (skippedCount > 0) {
-                toast.message?.(`تم تخطي ${skippedCount} صفًا غير مكتمل`);
+                toast.message?.(`تم تخطي ${skippedCount} صفًا غير مكتمل، وتم تنزيل ملف الأخطاء`);
             }
 
             if (failedCount > 0) {
-                toast.error(`فشل إنشاء ${failedCount} صفًا`);
+                toast.error(`فشل إنشاء ${failedCount} صفًا، وتم تنزيل ملف الأخطاء`);
             }
 
             if (createdCount === 0 && skippedCount > 0 && failedCount === 0) {
@@ -1156,7 +1365,11 @@ const StudentsPage = () => {
                         id={`${prefix}-${field.key}`}
                         type={field.type ?? "text"}
                         maxLength={field.maxLength}
-                        value={textValue(value[field.key as keyof typeof value])}
+                        value={
+                            field.type === "date"
+                                ? formatDateFieldValue(value[field.key as keyof typeof value])
+                                : textValue(value[field.key as keyof typeof value])
+                        }
                         onChange={(event) => onChange(field.key as keyof CreateStudentRequest, event.target.value)}
                         aria-invalid={Boolean(errors[field.key])}
                     />
@@ -1649,7 +1862,7 @@ const StudentsPage = () => {
                                     ["هاتف ولي الأمر", selectedStudent.parentPhoneNumber],
                                     ["واتساب ولي الأمر", selectedStudent.parentWhatsAppPhoneNumber],
                                     ["اسم المدرسة", selectedStudent.schoolName],
-                                    ["تاريخ الميلاد", selectedStudent.dateOfBirth || "غير محدد"],
+                                    ["تاريخ الميلاد", formatDateFieldValue(selectedStudent.dateOfBirth) || "غير محدد"],
                                     ["الهاتف الأرضي", selectedStudent.landlineNumber || "غير محدد"],
                                     [
                                         "المرحلة الدراسية",
