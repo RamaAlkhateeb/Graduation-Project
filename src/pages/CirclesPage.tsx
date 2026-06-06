@@ -31,6 +31,7 @@ interface Halaqa {
 interface Course {
   id: string;
   courseName: string;
+  semesterId: string | null;
 }
 
 interface HalaqaPayload {
@@ -49,6 +50,10 @@ interface PagedResponse<T> {
   items?: T[];
   data?: T[];
 }
+interface Semester {
+  id: string;
+  name: string;
+}
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ??
@@ -64,6 +69,10 @@ const CirclesPage = () => {
 
   const [circles, setCircles] = useState<Halaqa[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+
+const [selectedSemester, setSelectedSemester] = useState("all");
+const [selectedCourse, setSelectedCourse] = useState("all");
   const [students, setStudents] = useState<StudentBrief[]>([]);
 
   const [search, setSearch] = useState("");
@@ -98,6 +107,12 @@ const CirclesPage = () => {
     return new Map(courses.map((course) => [course.id, course.courseName]));
   }, [courses]);
 
+  const courseById = useMemo(() => {
+  return new Map(
+    courses.map((course) => [course.id, course])
+  );
+}, [courses]);
+
   const normalizeCollection = <T,>(response: T[] | PagedResponse<T>) => {
     if (Array.isArray(response)) {
       return response;
@@ -114,9 +129,43 @@ const CirclesPage = () => {
     return [];
   };
 
-  const filteredCircles = circles.filter((circle) =>
-    (circle.className ?? "").toLowerCase().includes(search.toLowerCase())
+  const filteredCircles = circles.filter((circle) => {
+  const course = courseById.get(circle.courseId ?? "");
+
+  const matchesSearch =
+    (circle.className ?? "")
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+  const matchesCourse =
+    selectedCourse === "all" ||
+    circle.courseId === selectedCourse;
+
+  const matchesSemester =
+    selectedSemester === "all" ||
+    course?.semesterId === selectedSemester;
+
+  return (
+    matchesSearch &&
+    matchesCourse &&
+    matchesSemester
   );
+});
+
+  const fetchSemesters = async () => {
+  try {
+    const response = await axiosClient.get<Semester[]>("/semesters");
+
+    setSemesters(
+      Array.isArray(response.data)
+        ? response.data
+        : []
+    );
+  } catch (error) {
+    console.error(error);
+    toast.error("تعذر تحميل الفصول");
+  }
+};
 
   const fetchCourses = async () => {
     try {
@@ -168,9 +217,10 @@ const CirclesPage = () => {
   };
 
   useEffect(() => {
-    fetchCourses();
-    fetchCircles();
-  }, []);
+  fetchSemesters();
+  fetchCourses();
+  fetchCircles();
+}, []);
 
   const resetForm = () => {
     setForm(emptyHalaqaPayload);
@@ -251,6 +301,53 @@ const CirclesPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+  className="border rounded-md h-10 px-3"
+  value={selectedSemester}
+  onChange={(e) => {
+    setSelectedSemester(e.target.value);
+
+    if (e.target.value !== "all") {
+      setSelectedCourse("all");
+    }
+  }}
+>
+  <option value="all">جميع الفصول</option>
+
+  {semesters.map((semester) => (
+    <option
+      key={semester.id}
+      value={semester.id}
+    >
+      {semester.name}
+    </option>
+  ))}
+</select>
+
+<select
+  className="border rounded-md h-10 px-3"
+  value={selectedCourse}
+  onChange={(e) =>
+    setSelectedCourse(e.target.value)
+  }
+>
+  <option value="all">جميع الكورسات</option>
+
+  {courses
+    .filter(
+      (course) =>
+        selectedSemester === "all" ||
+        course.semesterId === selectedSemester
+    )
+    .map((course) => (
+      <option
+        key={course.id}
+        value={course.id}
+      >
+        {course.courseName}
+      </option>
+    ))}
+</select>
         </div>
 
         <Dialog

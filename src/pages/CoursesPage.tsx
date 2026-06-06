@@ -66,6 +66,7 @@ const CoursesPage = () => {
     const [form, setForm] = useState<CoursePayload>(emptyCoursePayload);
     const [pageNumber, setPageNumber] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
+    const [selectedSemester, setSelectedSemester] = useState<string>("all");
 
     const axiosClient = useMemo(() => {
         const token = localStorage.getItem("token");
@@ -83,9 +84,18 @@ const CoursesPage = () => {
         return new Map(semesters.map((semester) => [semester.id, semester.name]));
     }, [semesters]);
 
-    const filteredCourses = courses.filter((course) =>
-        (course.courseName ?? "").toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredCourses = courses.filter((course) => {
+    const matchesSearch =
+        (course.courseName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
+
+    const matchesSemester =
+        selectedSemester === "all" ||
+        course.semesterId === selectedSemester;
+
+    return matchesSearch && matchesSemester;
+});
 
     const pagedCourses = filteredCourses.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
 
@@ -126,6 +136,10 @@ const CoursesPage = () => {
         fetchCourses();
         fetchHalaqas();
     }, []);
+
+    useEffect(() => {
+    setPageNumber(1);
+}, [search, selectedSemester]);
 
     const resetForm = () => {
         setForm(emptyCoursePayload);
@@ -196,13 +210,39 @@ const CoursesPage = () => {
     return (
         <DashboardLayout title="الكورسات" subtitle="إدارة الدورات التدريبية وعرض تفاصيلها">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
-                <div className="relative flex-1">
-                    <Input
-                        placeholder="بحث عن كورس..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
+    <div className="relative flex-1">
+        <Input
+            placeholder="بحث عن كورس..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+        />
+    </div>
+
+    <div className="w-full sm:w-60">
+        <Select
+            value={selectedSemester}
+            onValueChange={setSelectedSemester}
+        >
+            <SelectTrigger>
+                <SelectValue placeholder="اختر الفصل" />
+            </SelectTrigger>
+
+            <SelectContent>
+                <SelectItem value="all">
+                    جميع الفصول
+                </SelectItem>
+
+                {semesters.map((semester) => (
+                    <SelectItem
+                        key={semester.id}
+                        value={semester.id}
+                    >
+                        {semester.name}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    </div>
 
                 <Dialog
                     open={open}
