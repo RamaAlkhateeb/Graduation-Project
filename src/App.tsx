@@ -12,6 +12,7 @@ import StudentsPage from "./pages/StudentsPage";
 import CirclesPage from "./pages/CirclesPage";
 import EnrollmentsPage from "./pages/EnrollmentsPage";
 import CircleDetailsPage from "./pages/CircleDetailsPage";
+import DailyAttendancePage from "./pages/DailyAttendancePage";
 import ReportsPage from "./pages/ReportsPage";
 import ExamsPage from "./pages/ExamsPage";
 import SurveysPage from "./pages/SurveysPage";
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/circles" element={<CirclesPage />} />
           <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
           <Route path="/enrollments" element={<EnrollmentsPage />} />
+          <Route path="/attendance/daily" element={<DailyAttendancePage/>}/>
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
           <Route path="/surveys" element={<SurveysPage />} />

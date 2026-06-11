@@ -59,7 +59,6 @@ const CoursesPage = () => {
     const [semesters, setSemesters] = useState<Semester[]>([]);
     const [search, setSearch] = useState("");
     const [open, setOpen] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [selected, setSelected] = useState<Course | null>(null);
     const [relatedCourse, setRelatedCourse] = useState<Course | null>(null);
@@ -85,17 +84,17 @@ const CoursesPage = () => {
     }, [semesters]);
 
     const filteredCourses = courses.filter((course) => {
-    const matchesSearch =
-        (course.courseName ?? "")
-            .toLowerCase()
-            .includes(search.toLowerCase());
+        const matchesSearch =
+            (course.courseName ?? "")
+                .toLowerCase()
+                .includes(search.toLowerCase());
 
-    const matchesSemester =
-        selectedSemester === "all" ||
-        course.semesterId === selectedSemester;
+        const matchesSemester =
+            selectedSemester === "all" ||
+            course.semesterId === selectedSemester;
 
-    return matchesSearch && matchesSemester;
-});
+        return matchesSearch && matchesSemester;
+    });
 
     const pagedCourses = filteredCourses.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
 
@@ -138,8 +137,8 @@ const CoursesPage = () => {
     }, []);
 
     useEffect(() => {
-    setPageNumber(1);
-}, [search, selectedSemester]);
+        setPageNumber(1);
+    }, [search, selectedSemester]);
 
     const resetForm = () => {
         setForm(emptyCoursePayload);
@@ -181,7 +180,7 @@ const CoursesPage = () => {
     const handleEdit = (course: Course) => {
         setSelected(course);
         setForm({
-            courseName: course.courseName,
+            courseName: course.courseName ?? "",
             semesterId: course.semesterId ?? "",
         });
         setOpen(true);
@@ -210,39 +209,39 @@ const CoursesPage = () => {
     return (
         <DashboardLayout title="الكورسات" subtitle="إدارة الدورات التدريبية وعرض تفاصيلها">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
-    <div className="relative flex-1">
-        <Input
-            placeholder="بحث عن كورس..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-        />
-    </div>
+                <div className="relative flex-1">
+                    <Input
+                        placeholder="بحث عن كورس..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
 
-    <div className="w-full sm:w-60">
-        <Select
-            value={selectedSemester}
-            onValueChange={setSelectedSemester}
-        >
-            <SelectTrigger>
-                <SelectValue placeholder="اختر الفصل" />
-            </SelectTrigger>
-
-            <SelectContent>
-                <SelectItem value="all">
-                    جميع الفصول
-                </SelectItem>
-
-                {semesters.map((semester) => (
-                    <SelectItem
-                        key={semester.id}
-                        value={semester.id}
+                <div className="w-full sm:w-60">
+                    <Select
+                        value={selectedSemester}
+                        onValueChange={setSelectedSemester}
                     >
-                        {semester.name}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-    </div>
+                        <SelectTrigger>
+                            <SelectValue placeholder="اختر الفصل" />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                            <SelectItem value="all">
+                                جميع الفصول
+                            </SelectItem>
+
+                            {semesters.map((semester) => (
+                                <SelectItem
+                                    key={semester.id}
+                                    value={semester.id}
+                                >
+                                    {semester.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
                 <Dialog
                     open={open}
@@ -276,7 +275,8 @@ const CoursesPage = () => {
                             <div>
                                 <Label>الفصل</Label>
                                 <Select
-                                    value={form.semesterId || undefined}
+                                    // ✅ التعديل هنا: استخدام القيمة مباشرة بدون || undefined
+                                    value={form.semesterId !== "" ? form.semesterId : undefined}
                                     onValueChange={(semesterId) => setForm({ ...form, semesterId })}
                                 >
                                     <SelectTrigger>
@@ -339,7 +339,7 @@ const CoursesPage = () => {
                                                 {semesterNameById.get(course.semesterId ?? "") ?? "غير محدد"}
                                             </Badge>
                                         </td>
-                                        
+
                                         <td className="p-4">
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="outline" size="sm" onClick={() => handleEdit(course)}>

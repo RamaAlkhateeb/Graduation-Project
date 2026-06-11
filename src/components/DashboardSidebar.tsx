@@ -13,6 +13,7 @@ import {
   Menu,
   CalendarDays,
   BookMarked,
+  ClipboardCheck
 } from "lucide-react";
 
 const menuItems = [
@@ -23,7 +24,8 @@ const menuItems = [
   { icon: GraduationCap, label: "الطلاب", path: "/students" },
   { icon: BookOpen, label: "الحلقات", path: "/circles" },
   { icon: Users, label: "التسجيلات", path: "/enrollments" },
-  { icon: ClipboardList, label: "الاختبارات", path: "/exams" },
+  { icon: ClipboardCheck, label: "تسجيل الحضور", path: "/attendance/daily" },
+    { icon: ClipboardList, label: "الاختبارات", path: "/exams" },
   { icon: FileText, label: "الاستبيانات", path: "/surveys" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: MessageSquare, label: "الملاحظات", path: "/notes" },
