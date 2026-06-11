@@ -12,7 +12,6 @@ import {
   X,
   UserPlus,
   CalendarDays,
-  Sparkles,
   Loader2,
   ChevronDown,
 } from "lucide-react";
@@ -91,8 +90,6 @@ const DailyAttendancePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiReport, setAiReport] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -209,48 +206,6 @@ const DailyAttendancePage = () => {
     setTimeout(() => w.print(), 300);
   };
 
-  // ── AI Report ─────────────────────────────────────────────────────────────
-  const generateAiReport = async () => {
-    if (students.length === 0) { toast.error("لا يوجد طلاب"); return; }
-    setAiLoading(true);
-    setAiReport("");
-    const summary = students
-      .map((s) => {
-        const present = recordMap.has(s.id);
-        return `- ${s.name} (${s.fatherName}): ${present ? "حاضر" : "غائب"}`;
-      })
-      .join("\n");
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `أنت مساعد لمتابعة حضور طلاب حلقات تحفيظ القرآن الكريم.
-التاريخ: ${date} | الإجمالي: ${students.length} | حاضر: ${presentCount} | غائب: ${absentCount}
-${summary}
-اكتب تقريراً موجزاً باللغة العربية: ملخص الحضور، نسبة الحضور، وتوصيات للمعلم.`,
-          }],
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json())?.error?.message);
-      const data = await res.json();
-      setAiReport(
-        data.content
-          .filter((b: { type: string }) => b.type === "text")
-          .map((b: { text: string }) => b.text)
-          .join("\n")
-      );
-    } catch (e: unknown) {
-      toast.error("فشل التقرير: " + (e instanceof Error ? e.message : ""));
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <DashboardLayout
@@ -261,7 +216,7 @@ ${summary}
         {/* Controls + stats */}
         <Card className="p-5 lg:col-span-2 glass-card">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[180px]">
+            <div className="w-[200px]">
               <label className="text-sm font-medium mb-1.5 block">التاريخ</label>
               <div className="relative">
                 <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -275,10 +230,6 @@ ${summary}
             </div>
             <Button onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" /> طباعة
-            </Button>
-            <Button variant="outline" onClick={generateAiReport} disabled={aiLoading} className="gap-2">
-              {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              تقرير ذكي
             </Button>
           </div>
 
@@ -363,16 +314,6 @@ ${summary}
           </div>
         </Card>
       </div>
-
-      {/* AI Report */}
-      {aiReport && (
-        <Card className="glass-card p-5 mb-6 whitespace-pre-wrap text-sm leading-relaxed border-primary/30">
-          <h3 className="font-bold mb-2 flex items-center gap-2 text-primary">
-            <Sparkles className="h-4 w-4" /> التقرير الذكي
-          </h3>
-          {aiReport}
-        </Card>
-      )}
 
       {/* Table */}
       <Card className="glass-card overflow-hidden">
