@@ -15,7 +15,11 @@ import CircleDetailsPage from "./pages/CircleDetailsPage";
 import DailyAttendancePage from "./pages/DailyAttendancePage";
 import ReportsPage from "./pages/ReportsPage";
 import ExamsPage from "./pages/ExamsPage";
-import SurveysPage from "./pages/SurveysPage";
+import FormListPage from "./pages/FormListPage";
+import FormBuilderPage from './pages/FormBuilderPage';
+import FormPreviewPage from './pages/FormPreviewPage';
+import FormFillPage from './pages/FormFillPage';
+import FormResponsesPage from './pages/FormResponsesPage';
 import NotesPage from "./pages/NotesPage";
 import NotFound from "./pages/NotFound";
 
@@ -40,7 +44,12 @@ const App = () => (
           <Route path="/attendance/daily" element={<DailyAttendancePage/>}/>
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
-          <Route path="/surveys" element={<SurveysPage />} />
+          <Route path="/form" element={<FormListPage />} />
+           <Route path="/fill/:accessToken" element={<FormFillPage />} />
+           <Route path="/forms/new" element={<FormBuilderPage />} />
+        <Route path="/forms/:id/edit" element={<FormBuilderPage />} />
+        <Route path="/forms/:id/preview" element={<FormPreviewPage /> }/>
+        <Route path="/forms/:id/responses" element={<FormResponsesPage />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
