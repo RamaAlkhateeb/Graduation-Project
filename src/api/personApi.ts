@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { API_URL } from '../config';
-import { useAuthStore } from '../store/authStore';
 import type {
   StudentListItemDto, CreateStudentDto, UpdateStudentDto, StudentEnrollmentDto,
   TeacherDto, CreateTeacherDto, UpdateTeacherDto, TeacherEnrollmentDto, EnrollInClassDto,
@@ -19,7 +18,7 @@ function normalizeArrayResponse<T>(payload: unknown): T[] {
 }
 
 api.interceptors.request.use(config => {
-  const token = useAuthStore.getState().token;
+  const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -28,8 +27,9 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+      localStorage.removeItem('token');
+      localStorage.removeItem('expiresAt');
+      window.location.href = '/';
     }
     return Promise.reject(err);
   }

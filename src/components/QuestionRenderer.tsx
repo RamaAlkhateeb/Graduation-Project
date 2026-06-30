@@ -26,31 +26,31 @@ const QuestionRenderer: FC<QuestionRendererProps> = ({ question, register, error
 
   return (
     <div style={colSpanStyle(question.columnSpan || 12)} className="space-y-2">
-      <label className="block font-medium text-gray-700" style={labelStyle}>
+      <label className="block font-medium text-foreground" style={labelStyle}>
         {question.text}
-        {question.isRequired && <span className="text-red-500 ml-1">*</span>}
+        {question.isRequired && <span className="text-destructive mr-1">*</span>}
       </label>
       {question.description && (
-        <p className="text-sm text-gray-500">{question.description}</p>
+        <p className="text-sm text-muted-foreground">{question.description}</p>
       )}
 
       {question.questionType === 'ShortText' && (
         <input
           type="text"
-          {...register(fieldName, { required: question.isRequired ? 'This field is required' : false })}
+          {...register(fieldName, { required: question.isRequired ? 'هذا الحقل مطلوب' : false })}
           readOnly={readOnly}
-          placeholder="Short answer"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50"
+          placeholder="إجابة قصيرة"
+          className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring outline-none disabled:bg-muted"
         />
       )}
 
       {question.questionType === 'LongText' && (
         <textarea
-          {...register(fieldName, { required: question.isRequired ? 'This field is required' : false })}
+          {...register(fieldName, { required: question.isRequired ? 'هذا الحقل مطلوب' : false })}
           readOnly={readOnly}
           rows={4}
-          placeholder="Long answer"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-gray-50"
+          placeholder="إجابة مطوّلة"
+          className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring outline-none resize-none disabled:bg-muted"
         />
       )}
 
@@ -61,11 +61,11 @@ const QuestionRenderer: FC<QuestionRendererProps> = ({ question, register, error
               <input
                 type="radio"
                 value={opt.id}
-                {...register(fieldName, { required: question.isRequired ? 'Please select an option' : false })}
+                {...register(fieldName, { required: question.isRequired ? 'الرجاء اختيار خيار' : false })}
                 disabled={readOnly}
-                className="w-4 h-4 text-blue-600"
+                className="w-4 h-4 text-primary"
               />
-              <span className="text-gray-700 group-hover:text-gray-900">{opt.text}</span>
+              <span className="text-foreground/90 group-hover:text-foreground">{opt.text}</span>
             </label>
           ))}
         </div>
@@ -80,9 +80,9 @@ const QuestionRenderer: FC<QuestionRendererProps> = ({ question, register, error
                 value={opt.id}
                 {...register(`${fieldName}_${opt.id}`)}
                 disabled={readOnly}
-                className="w-4 h-4 text-blue-600 rounded"
+                className="w-4 h-4 text-primary rounded"
               />
-              <span className="text-gray-700 group-hover:text-gray-900">{opt.text}</span>
+              <span className="text-foreground/90 group-hover:text-foreground">{opt.text}</span>
             </label>
           ))}
         </div>
@@ -90,11 +90,11 @@ const QuestionRenderer: FC<QuestionRendererProps> = ({ question, register, error
 
       {question.questionType === 'Dropdown' && (
         <select
-          {...register(fieldName, { required: question.isRequired ? 'Please select an option' : false })}
+          {...register(fieldName, { required: question.isRequired ? 'الرجاء اختيار خيار' : false })}
           disabled={readOnly}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-50"
+          className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring outline-none disabled:bg-muted"
         >
-          <option value="">Select an option...</option>
+          <option value="">اختر خيارًا...</option>
           {question.options.map(opt => (
             <option key={opt.id} value={opt.id}>{opt.text}</option>
           ))}
@@ -102,7 +102,7 @@ const QuestionRenderer: FC<QuestionRendererProps> = ({ question, register, error
       )}
 
       {error && (
-        <p className="text-sm text-red-500">{error.message as string}</p>
+        <p className="text-sm text-destructive">{error.message as string}</p>
       )}
     </div>
   );

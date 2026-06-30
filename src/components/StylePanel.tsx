@@ -11,9 +11,9 @@ interface StylePanelProps {
 const StylePanel: FC<StylePanelProps> = ({ labelColor, fontSize, fontFamily, onChange }) => {
   return (
     <div className="space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Style</h4>
+      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">التنسيق</h4>
       <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-600 w-24">Label Color</label>
+        <label className="text-sm text-gray-600 w-24">لون النص</label>
         <input
           type="color"
           value={labelColor || '#374151'}
@@ -23,7 +23,7 @@ const StylePanel: FC<StylePanelProps> = ({ labelColor, fontSize, fontFamily, onC
         <span className="text-xs text-gray-400">{labelColor || '#374151'}</span>
       </div>
       <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-600 w-24">Font Size</label>
+        <label className="text-sm text-gray-600 w-24">حجم الخط</label>
         <input
           type="number"
           value={fontSize || 14}
@@ -35,7 +35,7 @@ const StylePanel: FC<StylePanelProps> = ({ labelColor, fontSize, fontFamily, onC
         <span className="text-xs text-gray-400">px</span>
       </div>
       <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-600 w-24">Font Family</label>
+        <label className="text-sm text-gray-600 w-24">نوع الخط</label>
         <select
           value={fontFamily || 'Inter'}
           onChange={e => onChange({ fontFamily: e.target.value })}

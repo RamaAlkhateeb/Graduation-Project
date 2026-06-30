@@ -1,6 +1,5 @@
 import type { FC, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useT } from '../i18n';
 
@@ -10,13 +9,13 @@ interface AppHeaderProps {
 
 const AppHeader: FC<AppHeaderProps> = ({ children }) => {
   const navigate = useNavigate();
-  const logout = useAuthStore(s => s.logout);
   const { theme, toggleTheme, lang, toggleLang } = useSettingsStore();
   const t = useT();
 
   const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+    localStorage.removeItem('token');
+    localStorage.removeItem('expiresAt');
+    navigate('/', { replace: true });
   };
 
   return (
@@ -38,7 +37,6 @@ const AppHeader: FC<AppHeaderProps> = ({ children }) => {
 
         {/* Controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Language toggle */}
           <button
             onClick={toggleLang}
             className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
@@ -46,7 +44,6 @@ const AppHeader: FC<AppHeaderProps> = ({ children }) => {
           >
             {lang === 'en' ? 'عر' : 'EN'}
           </button>
-          {/* Theme toggle */}
           <button
             onClick={toggleTheme}
             className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
@@ -54,7 +51,6 @@ const AppHeader: FC<AppHeaderProps> = ({ children }) => {
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          {/* Logout */}
           <button
             onClick={handleLogout}
             className="px-3 py-1.5 text-xs font-semibold rounded-xl text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"

@@ -10,21 +10,24 @@ interface QuestionEditorProps {
   onDelete: () => void;
 }
 
+// عدّل القائمة:
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
-  { value: 'ShortText', label: 'Short Answer' },
-  { value: 'LongText', label: 'Long Answer' },
-  { value: 'MultipleChoice', label: 'Multiple Choice' },
-  { value: 'Checkbox', label: 'Checkboxes' },
-  { value: 'Dropdown', label: 'Dropdown' },
+  { value: 'ShortText', label: 'إجابة قصيرة' },
+  { value: 'LongText', label: 'إجابة مطوّلة' },
+  { value: 'MultipleChoice', label: 'اختيار من متعدد' },
+  { value: 'Checkbox', label: 'مربعات اختيار' },
+  { value: 'Dropdown', label: 'قائمة منسدلة' },
 ];
 
 const COLUMN_SPAN_OPTIONS = [
-  { value: 3, label: '25% (1/4)' },
-  { value: 4, label: '33% (1/3)' },
-  { value: 6, label: '50% (1/2)' },
-  { value: 9, label: '75% (3/4)' },
-  { value: 12, label: '100% (Full)' },
+  { value: 3, label: '٪25 (1/4)' },
+  { value: 4, label: '٪33 (1/3)' },
+  { value: 6, label: '٪50 (1/2)' },
+  { value: 9, label: '٪75 (3/4)' },
+  { value: 12, label: '٪100 (كامل)' },
 ];
+
+
 
 const QuestionEditor: FC<QuestionEditorProps> = ({ question, isQuiz, onChange, onDelete }) => {
   const [showStyle, setShowStyle] = useState(false);

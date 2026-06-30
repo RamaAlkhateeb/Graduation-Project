@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { API_URL } from '../config';
-import { useAuthStore } from '../store/authStore';
 import type {
   FormDto, CreateFormDto, UpdateFormDto,
   FormQuestionDto, CreateFormQuestionDto, UpdateFormQuestionDto,
@@ -10,22 +9,23 @@ import type {
 
 const api = axios.create({ baseURL: API_URL });
 
-// Attach JWT token to every request
+// إرفاق التوكن مع كل طلب 
 api.interceptors.request.use(config => {
-  const token = useAuthStore.getState().token;
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// On 401, clear auth and redirect to login
+// عند 401: مسح التوكن والعودة لصفحة تسجيل الدخول الفعلية ("/")
 api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+      localStorage.removeItem('token');
+      localStorage.removeItem('expiresAt');
+      window.location.href = '/';
     }
     return Promise.reject(err);
   }
