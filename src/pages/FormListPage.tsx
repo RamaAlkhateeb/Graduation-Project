@@ -53,8 +53,8 @@ export default function FormListPage() {
 
   return (
     <DashboardLayout
-      title="الاستبيانات"
-      subtitle={!loading && !error ? `${forms.length} ${forms.length === 1 ? 'استبيان' : 'استبيانات'} إجمالاً` : undefined}
+      title="الاستبيانات والاختبارات"
+      subtitle={!loading && !error ? `${forms.length} ${forms.length === 1 ? 'استبيان' : 'استبيان واختبار'} إجمالاً` : undefined}
     >
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
@@ -63,7 +63,7 @@ export default function FormListPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ابحث في الاستبيانات..."
+            placeholder="ابحث في الاستبيانات والاختبارات..."
             className="w-full h-10 rounded-md border border-input bg-background pr-10 pl-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -71,7 +71,7 @@ export default function FormListPage() {
         <Button asChild className="gap-2">
           <Link to="/forms/new">
             <Plus className="h-4 w-4" />
-            إنشاء استبيان
+           إنشاء استبيان او اختبار
           </Link>
         </Button>
       </div>

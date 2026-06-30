@@ -29,7 +29,7 @@ import QuestionEditor from '../components/QuestionEditor';
 import { FONT_FAMILIES_GROUPED } from '../config';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Eye } from 'lucide-react';
+import { ChevronRight, Eye } from 'lucide-react'; 
 import { useT } from '../i18n';
 
 function SortableQuestion({
@@ -59,8 +59,8 @@ function SortableQuestion({
         <button
           {...attributes}
           {...listeners}
-          className="mt-4 p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
-          title="Drag to reorder"
+          className="mt-4 p-1 text-gray-400 hover:text-emerald-700 cursor-grab active:cursor-grabbing"
+          title="سحب لإعادة الترتيب"
         >
           ⠿
         </button>
@@ -87,39 +87,37 @@ export default function FormBuilderPage() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [title, setTitle] = useState('Untitled Form');
+  // نصوص عربية افتراضية وألوان خضراء
+  const [title, setTitle] = useState('نموذج بدون عنوان');
   const [description, setDescription] = useState('');
   const [formType, setFormType] = useState<FormType>('Normal');
   const [audience, setAudience] = useState<AudienceType>('Students');
   const [isActive, setIsActive] = useState(true);
   const [allowMultipleResponses, setAllowMultipleResponses] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState<number | undefined>(undefined);
-  const [primaryColor, setPrimaryColor] = useState('#3b82f6');
-  const [backgroundColor, setBackgroundColor] = useState('#f9fafb');
+  const [primaryColor, setPrimaryColor] = useState('#064e3b'); // أخضر غامق
+  const [backgroundColor, setBackgroundColor] = useState('#f0fdf4'); // خلفية خضراء باهتة جداً
   const [fontFamily, setFontFamily] = useState('Inter');
   const [questions, setQuestions] = useState<FormQuestionDto[]>([]);
   const [showStylePanel, setShowStylePanel] = useState(false);
 
-  // Refs for debounced auto-save
   const formSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const questionSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const optionSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Latest form data ref to avoid stale closures in debounced save
   const latestFormData = useRef({
-    title: 'Untitled Form',
+    title: 'نموذج بدون عنوان',
     description: '',
     formType: 'Normal' as FormType,
     audience: 'Students' as AudienceType,
     isActive: true,
     allowMultipleResponses: false,
     timerMinutes: undefined as number | undefined,
-    primaryColor: '#3b82f6',
-    backgroundColor: '#f9fafb',
+    primaryColor: '#064e3b',
+    backgroundColor: '#f0fdf4',
     fontFamily: 'Inter',
   });
 
-  // Mirror questions to a ref for use in callbacks that must not re-create on every render
   const questionsRef = useRef<FormQuestionDto[]>([]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
 
@@ -128,7 +126,6 @@ export default function FormBuilderPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Cleanup all timers on unmount
   useEffect(() => {
     return () => {
       if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
@@ -137,11 +134,10 @@ export default function FormBuilderPage() {
     };
   }, []);
 
-  // For new forms: auto-create via API on mount, then navigate to edit URL
   useEffect(() => {
     if (!isEdit) {
       formApi.create({
-        title: 'Untitled Form',
+        title: 'العنوان',
         description: null,
         formType: 'Normal',
         audience: 'Students',
@@ -154,19 +150,18 @@ export default function FormBuilderPage() {
         createdByTeacherId: null,
         halaqaId: null,
         courseId: null,
-        primaryColor: null,
-        backgroundColor: null,
+        primaryColor: '#064e3b',
+        backgroundColor: '#f0fdf4',
         fontFamily: null,
       }).then(created => {
         navigate(`/forms/${created.id}/edit`, { replace: true });
       }).catch(() => {
-        setError('Failed to create form. Please try again.');
+        setError('فشل في إنشاء النموذج. يرجى المحاولة مرة أخرى.');
         setLoading(false);
       });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // For edit forms: load existing form data
   useEffect(() => {
     if (isEdit && id) {
       formApi.get(id)
@@ -178,8 +173,8 @@ export default function FormBuilderPage() {
           setIsActive(form.isActive);
           setAllowMultipleResponses(form.allowMultipleResponses);
           setTimerMinutes(form.timerMinutes);
-          setPrimaryColor(form.primaryColor || '#3b82f6');
-          setBackgroundColor(form.backgroundColor || '#f9fafb');
+          setPrimaryColor(form.primaryColor || '#064e3b');
+          setBackgroundColor(form.backgroundColor || '#f0fdf4');
           setFontFamily(form.fontFamily || 'Inter');
           const sorted = [...(form.questions || [])].sort((a, b) => a.order - b.order);
           setQuestions(sorted);
@@ -191,17 +186,16 @@ export default function FormBuilderPage() {
             isActive: form.isActive,
             allowMultipleResponses: form.allowMultipleResponses,
             timerMinutes: form.timerMinutes,
-            primaryColor: form.primaryColor || '#3b82f6',
-            backgroundColor: form.backgroundColor || '#f9fafb',
+            primaryColor: form.primaryColor || '#064e3b',
+            backgroundColor: form.backgroundColor || '#f0fdf4',
             fontFamily: form.fontFamily || 'Inter',
           };
         })
-        .catch(() => setError('Failed to load form'))
+        .catch(() => setError('فشل في تحميل النموذج'))
         .finally(() => setLoading(false));
     }
   }, [id, isEdit]);
 
-  // Schedule a debounced form auto-save (1 second after last change)
   const scheduleFormSave = useCallback(() => {
     if (!id) return;
     if (formSaveTimerRef.current) clearTimeout(formSaveTimerRef.current);
@@ -210,7 +204,7 @@ export default function FormBuilderPage() {
       const data = latestFormData.current;
       try {
         await formApi.update(id, {
-          title: data.title.trim() || 'Untitled Form',
+          title: data.title.trim() || 'نموذج بدون عنوان',
           description: data.description.trim() || null,
           formType: data.formType,
           audience: data.audience,
@@ -222,14 +216,13 @@ export default function FormBuilderPage() {
           fontFamily: data.fontFamily,
         });
       } catch {
-        // Silent auto-save failure
+        // Silent
       } finally {
         setAutoSaving(false);
       }
     }, 1000);
   }, [id]);
 
-  // Schedule a debounced question auto-save (1 second after last change)
   const scheduleQuestionSave = (question: FormQuestionDto) => {
     if (question.id.startsWith('temp-')) return;
     const key = question.id;
@@ -237,7 +230,7 @@ export default function FormBuilderPage() {
     questionSaveTimers.current.set(key, setTimeout(async () => {
       try {
         await questionApi.update(question.id, {
-          text: question.text || 'Question',
+          text: question.text || 'السؤال',
           description: question.description,
           questionType: question.questionType,
           order: question.order,
@@ -248,14 +241,11 @@ export default function FormBuilderPage() {
           fontSize: question.fontSize,
           fontFamily: question.fontFamily,
         });
-      } catch {
-        // Silent auto-save failure
-      }
+      } catch { }
       questionSaveTimers.current.delete(key);
     }, 1000));
   };
 
-  // Schedule a debounced option auto-save (1 second after last change)
   const scheduleOptionSave = (option: FormQuestionOptionDto) => {
     if (option.id.startsWith('temp-')) return;
     const key = option.id;
@@ -267,14 +257,11 @@ export default function FormBuilderPage() {
           order: option.order,
           isCorrect: option.isCorrect,
         });
-      } catch {
-        // Silent auto-save failure
-      }
+      } catch { }
       optionSaveTimers.current.delete(key);
     }, 1000));
   };
 
-  // Form field change handlers — update state + ref + schedule save
   const handleTitleChange = (val: string) => {
     setTitle(val);
     latestFormData.current = { ...latestFormData.current, title: val };
@@ -348,12 +335,9 @@ export default function FormBuilderPage() {
 
     const reordered = arrayMove(qs, oldIdx, newIdx).map((q, i) => ({ ...q, order: i }));
     setQuestions(reordered);
-
-    // Schedule API saves for all reordered questions
     reordered.forEach(q => { scheduleQuestionSave(q); });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Add a new question: immediately create it via API
   const addQuestion = async (type: QuestionType = 'ShortText') => {
     if (!id) return;
     try {
@@ -367,33 +351,26 @@ export default function FormBuilderPage() {
         options: [],
       });
       setQuestions(qs => [...qs, created]);
-      // Keep form-level auto-save behavior consistent with typing edits.
       scheduleFormSave();
     } catch {
-      setError('Failed to add question. Please try again.');
+      setError('فشل في إضافة السؤال.');
     }
   };
 
-  // Update a question locally and sync changes to the API
   const updateQuestion = (idx: number, updated: FormQuestionDto) => {
     const old = questionsRef.current[idx];
     if (!old) return;
-
     setQuestions(qs => qs.map((q, i) => i === idx ? updated : q));
-
-    // Skip API sync for questions not yet persisted
     if (updated.id.startsWith('temp-')) return;
 
-    // Detect option changes
     const oldOptionMap = new Map(old.options.map(o => [o.id, o]));
     const newOptionIds = new Set(updated.options.map(o => o.id));
 
-    // New options (temp- ID) → create via API immediately
     updated.options.forEach(option => {
       if (option.id.startsWith('temp-')) {
         optionApi.create({
           questionId: updated.id,
-          text: option.text || `Option ${option.order + 1}`,
+          text: option.text || `خيار ${option.order + 1}`,
           order: option.order,
           isCorrect: option.isCorrect,
         }).then(created => {
@@ -404,39 +381,30 @@ export default function FormBuilderPage() {
           ));
         }).catch(() => {});
       } else if (oldOptionMap.has(option.id)) {
-        // Existing option that was changed → debounced update
         const oldOpt = oldOptionMap.get(option.id)!;
-        if (
-          oldOpt.text !== option.text ||
-          oldOpt.isCorrect !== option.isCorrect ||
-          oldOpt.order !== option.order
-        ) {
+        if (oldOpt.text !== option.text || oldOpt.isCorrect !== option.isCorrect || oldOpt.order !== option.order) {
           scheduleOptionSave(option);
         }
       }
     });
 
-    // Removed options → delete via API immediately
     old.options.forEach(oldOpt => {
       if (!newOptionIds.has(oldOpt.id) && !oldOpt.id.startsWith('temp-')) {
         optionApi.delete(oldOpt.id).catch(() => {});
       }
     });
 
-    // Schedule debounced question save for text/property changes
     scheduleQuestionSave(updated);
   };
 
-  // Delete a question: remove from API then from state
   const deleteQuestion = async (idx: number) => {
     const q = questionsRef.current[idx];
     if (!q) return;
-
     if (!q.id.startsWith('temp-')) {
       try {
         await questionApi.delete(q.id);
       } catch {
-        setError('Failed to delete question. Please try again.');
+        setError('فشل في حذف السؤال.');
         return;
       }
     }
@@ -446,37 +414,37 @@ export default function FormBuilderPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <DashboardLayout title={title || 'Untitled Form'} subtitle="منشئ النماذج والاختبارات">
+    <DashboardLayout title={title || 'إنشاء استبيان أو اختبار'} subtitle="منشئ النماذج والاختبارات">
       <div className="glass-card rounded-xl px-4 py-3 flex items-center justify-between mb-6" dir="rtl">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm" className="gap-1.5">
             <Link to="/form">
-              <ChevronLeft className="h-4 w-4" />
-              {t.back}
+              <ChevronRight className="h-4 w-4" /> {/* تم التغيير لليمين لأن الاتجاه RTL */}
+              {t.back || 'رجوع'}
             </Link>
           </Button>
           {error && <span className="text-sm text-destructive">{error}</span>}
           {autoSaving && (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
-              {t.saving}
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+              {t.saving || 'جاري الحفظ...'}
             </span>
           )}
           {!autoSaving && !error && isEdit && (
-            <span className="text-xs text-success">✓ {t.save}d</span>
+            <span className="text-xs text-emerald-600">✓ {t.save || 'تم الحفظ'}</span>
           )}
         </div>
         {isEdit && (
-          <Button asChild variant="outline" size="sm" className="gap-1.5">
+          <Button asChild variant="outline" size="sm" className="gap-1.5 border-emerald-600/20 text-emerald-700 hover:bg-emerald-50">
             <Link to={`/forms/${id}/preview`}>
               <Eye className="h-3.5 w-3.5" />
-              {t.preview}
+              {t.preview || 'معاينة'}
             </Link>
           </Button>
         )}
@@ -484,118 +452,118 @@ export default function FormBuilderPage() {
 
       <div className="max-w-5xl mx-auto space-y-6" dir="rtl" style={{ fontFamily }}>
         {/* Form header card */}
-        <div className="glass-card rounded-xl border-t-4 p-6 space-y-4" style={{ borderTopColor: primaryColor }}>
+        <div className="glass-card rounded-xl border-t-4 p-6 space-y-4 shadow-sm" style={{ borderTopColor: primaryColor }}>
           <textarea
             value={title}
             onChange={e => handleTitleChange(e.target.value)}
-            placeholder="Form Title"
+            placeholder="عنوان النموذج"
             rows={1}
-            className="w-full text-3xl font-bold text-foreground border-none outline-none resize-none bg-transparent"
+            className="w-full text-3xl font-bold text-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
           />
           <textarea
             value={description}
             onChange={e => handleDescriptionChange(e.target.value)}
-            placeholder="Form description (optional)"
+            placeholder="وصف النموذج (اختياري)"
             rows={2}
-            className="w-full text-base text-muted-foreground border-none outline-none resize-none bg-transparent"
+            className="w-full text-base text-muted-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
           />
 
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-emerald-100">
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Form Type</label>
+              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">نوع النموذج</label>
               <select
                 value={formType}
                 onChange={e => handleFormTypeChange(e.target.value as FormType)}
-                className="mt-1 w-full px-3 py-2 border border-input rounded-lg text-sm bg-background text-foreground focus:ring-2 focus:ring-ring outline-none"
+                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
-                <option value="Normal">Normal</option>
-                <option value="Quiz">Quiz</option>
+                <option value="Normal">استبيان</option>
+                <option value="Quiz">اختبار</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audience</label>
+              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">الفئة المستهدفة</label>
               <select
                 value={audience}
                 onChange={e => handleAudienceChange(e.target.value as AudienceType)}
-                className="mt-1 w-full px-3 py-2 border border-input rounded-lg text-sm bg-background text-foreground focus:ring-2 focus:ring-ring outline-none"
+                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
-                <option value="Students">Students</option>
-                <option value="Teachers">Teachers</option>
-                <option value="Both">Both</option>
+                <option value="Students">الطلاب</option>
+                <option value="Teachers">المعلمون</option>
+                <option value="Both">الجميع</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Timer (minutes)</label>
+              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">المؤقت (بالدقائق)</label>
               <input
                 type="number"
                 value={timerMinutes || ''}
                 onChange={e => handleTimerChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="No timer"
+                placeholder="بدون مؤقت"
                 min={1}
-                className="mt-1 w-full px-3 py-2 border border-input rounded-lg text-sm bg-background text-foreground focus:ring-2 focus:ring-ring outline-none"
+                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
-            <div className="flex flex-col gap-3 pt-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+            <div className="flex flex-col gap-3 pt-2">
+              <label className="flex items-center gap-3 cursor-pointer group">
                 <div
                   onClick={handleIsActiveToggle}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${isActive ? 'bg-primary' : 'bg-muted'}`}
+                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${isActive ? 'bg-emerald-600' : 'bg-gray-300'}`}
                 >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-background rounded-full shadow transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isActive ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
                 </div>
-                <span className="text-sm text-foreground">Active</span>
+                <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">النموذج نشط</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer group">
                 <div
                   onClick={handleAllowMultipleToggle}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${allowMultipleResponses ? 'bg-primary' : 'bg-muted'}`}
+                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${allowMultipleResponses ? 'bg-emerald-600' : 'bg-gray-300'}`}
                 >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-background rounded-full shadow transition-transform ${allowMultipleResponses ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowMultipleResponses ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
                 </div>
-                <span className="text-sm text-foreground">Allow Multiple Responses</span>
+                <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">السماح بأكثر من رد</span>
               </label>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-border/50">
+          <div className="pt-2 border-t border-emerald-100">
             <button
               onClick={() => setShowStylePanel(s => !s)}
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
+              className="text-sm font-medium text-emerald-700 hover:text-emerald-900 flex items-center gap-2 transition-colors"
             >
-              🎨 {showStylePanel ? 'Hide' : 'Show'} Form Style Settings
+              🎨 {showStylePanel ? 'إخفاء' : 'إظهار'} إعدادات مظهر النموذج
             </button>
             {showStylePanel && (
-              <div className="mt-4 grid grid-cols-3 gap-4">
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">Primary Color</label>
+                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">اللون الأساسي</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
                       value={primaryColor}
                       onChange={e => handlePrimaryColorChange(e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border border-input"
+                      className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
                     />
-                    <span className="text-sm text-muted-foreground">{primaryColor}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{primaryColor.toUpperCase()}</span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">Background Color</label>
+                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">لون الخلفية</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
                       value={backgroundColor}
                       onChange={e => handleBackgroundColorChange(e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border border-input"
+                      className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
                     />
-                    <span className="text-sm text-muted-foreground">{backgroundColor}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{backgroundColor.toUpperCase()}</span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">Font Family</label>
+                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">خط الكتابة</label>
                   <select
                     value={fontFamily}
                     onChange={e => handleFontFamilyChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-lg text-sm bg-background text-foreground outline-none"
+                    className="w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500"
                     style={{ fontFamily }}
                   >
                     {FONT_FAMILIES_GROUPED.map(group => (
@@ -629,21 +597,40 @@ export default function FormBuilderPage() {
           </SortableContext>
         </DndContext>
 
-        {/* Add question */}
-        <div className="flex flex-wrap gap-2 justify-center py-4">
-          {(['ShortText', 'LongText', 'MultipleChoice', 'Checkbox', 'Dropdown'] as QuestionType[]).map(type => (
-            <button
-              key={type}
-              onClick={() => addQuestion(type)}
-              className="px-4 py-2 text-sm font-medium text-primary border border-primary/30 bg-background rounded-xl hover:bg-primary/10 transition-colors shadow-sm"
-            >
-              + {type === 'ShortText' ? 'Short Answer' : type === 'LongText' ? 'Long Answer' : type === 'MultipleChoice' ? 'Multiple Choice' : type}
-            </button>
-          ))}
+        {/* Add question buttons */}
+        <div className="flex flex-wrap gap-3 justify-center py-8 border-t border-dashed border-emerald-200">
+          <button
+            onClick={() => addQuestion('ShortText')}
+            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            + إجابة قصيرة
+          </button>
+          <button
+            onClick={() => addQuestion('LongText')}
+            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            + نص طويل
+          </button>
+          <button
+            onClick={() => addQuestion('MultipleChoice')}
+            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            + خيارات متعددة
+          </button>
+          <button
+            onClick={() => addQuestion('Checkbox')}
+            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            + مربعات اختيار
+          </button>
+          <button
+            onClick={() => addQuestion('Dropdown')}
+            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+          >
+            + قائمة منسدلة
+          </button>
         </div>
       </div>
     </DashboardLayout>
   );
-
 }
-
