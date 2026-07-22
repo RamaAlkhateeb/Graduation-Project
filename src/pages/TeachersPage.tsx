@@ -424,9 +424,13 @@ const TeachersPage = () => {
                     </SelectContent>
                 </Select>
 
-                <Select value={selectedCourseId || "all"} onValueChange={handleCourseChange}>
+                <Select
+                    value={selectedCourseId || "all"}
+                    onValueChange={handleCourseChange}
+                    disabled={!selectedSemesterId}
+                >
                     <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="كل الكورسات" />
+                        <SelectValue placeholder={!selectedSemesterId ? "اختر الفصل أولاً" : "كل الكورسات"} />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">كل الكورسات</SelectItem>
@@ -436,9 +440,13 @@ const TeachersPage = () => {
                     </SelectContent>
                 </Select>
 
-                <Select value={selectedHalaqaId || "all"} onValueChange={handleHalaqaChange}>
+                <Select
+                    value={selectedHalaqaId || "all"}
+                    onValueChange={handleHalaqaChange}
+                    disabled={!selectedCourseId}
+                >
                     <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="كل الحلقات" />
+                        <SelectValue placeholder={!selectedCourseId ? "اختر الكورس أولاً" : "كل الحلقات"} />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">كل الحلقات</SelectItem>

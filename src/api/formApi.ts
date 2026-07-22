@@ -5,6 +5,7 @@ import type {
   FormQuestionDto, CreateFormQuestionDto, UpdateFormQuestionDto,
   FormQuestionOptionDto, CreateFormQuestionOptionDto, UpdateFormQuestionOptionDto,
   FormResponseDto, SubmitFormResponseDto, PaginatedResult,
+  FormAnswerDto, GradeAnswerDto,
 } from '../types/form';
 
 const api = axios.create({ baseURL: API_URL });
@@ -74,4 +75,15 @@ export const responseApi = {
     api.post<FormResponseDto>('/formresponses/submit', data).then(r => r.data),
   list: (formId: string) =>
     api.get<FormResponseDto[]>(`/formresponses/by-form/${formId}`).then(r => r.data),
+};
+
+// تصحيح الأسئلة النصية (ShortText / LongText) يدويًا من قبل المعلم.
+// ⚠️ ملاحظة: هذا المسار (PUT /formanswers/{id}/grade) يجب أن يكون مطبقًا في الـ backend،
+// ويُفترض أن يقوم بإعادة احتساب الدرجة الإجمالية (score) لكامل الرد (FormResponseDto)
+// بحيث تشمل درجات الأسئلة المصححة يدويًا إضافة إلى الأسئلة المصححة تلقائيًا.
+export const answerApi = {
+  grade: (answerId: string, pointsAwarded: number) =>
+    api
+      .put<FormAnswerDto>(`/formanswers/${answerId}/grade`, { pointsAwarded } as GradeAnswerDto)
+      .then(r => r.data),
 };

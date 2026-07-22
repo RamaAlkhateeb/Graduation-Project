@@ -155,6 +155,14 @@ export interface FormAnswerDto {
   questionText: string;
   textAnswer?: string;
   selectedOptions: FormQuestionOptionDto[];
+  // درجة التصحيح اليدوي للأسئلة النصية (ShortText / LongText)
+  // null/undefined = لم يتم تصحيحها بعد من قبل المعلم
+  pointsAwarded?: number | null;
+}
+
+// Payload لتصحيح إجابة نصية يدويًا من قبل المعلم
+export interface GradeAnswerDto {
+  pointsAwarded: number;
 }
 
 export interface PaginatedResult<T> {

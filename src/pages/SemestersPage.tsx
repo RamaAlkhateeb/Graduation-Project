@@ -18,6 +18,8 @@ import {
   Pencil,
   Trash2,
   BookMarked,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import TableRowContextMenu from "@/components/TableRowContextMenu";
@@ -51,6 +53,15 @@ const formatDate = (date: string) =>
     day: "numeric",
   });
 
+// يحوّل أي صيغة تاريخ (مثل ISO الكاملة القادمة من الـ API) إلى yyyy-MM-dd
+// وهي الصيغة التي يحتاجها حقل <input type="date" />
+const formatDateForInput = (date: string | null | undefined) => {
+  if (!date) return "";
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+};
+
 const getStatus = (start: string, end: string) => {
   const now = new Date();
   const s = new Date(start);
@@ -71,6 +82,10 @@ const SemestersPage = () => {
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // ── بحث وفلترة ──
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
 
   const [form, setForm] = useState<SemesterPayload>({
     name: "",
@@ -114,6 +129,38 @@ const SemestersPage = () => {
     fetchCourses();
   }, []);
 
+  // فلترة الفصول حسب اسم الفصل وحسب تاريخ يقع ضمن (بداية - نهاية) الفصل
+  const filteredSemesters = semesters.filter((semester) => {
+    const matchesSearch = semester.name
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    let matchesDate = true;
+
+    if (dateFilter) {
+      if (!semester.startDate || !semester.endDate) {
+        matchesDate = false;
+      } else {
+        const target = new Date(dateFilter).getTime();
+        const start = new Date(semester.startDate).getTime();
+        const end = new Date(semester.endDate).getTime();
+        matchesDate = target >= start && target <= end;
+      }
+    }
+
+    return matchesSearch && matchesDate;
+  });
+
+  // إعادة الصفحة إلى 1 عند تغيير البحث أو الفلتر
+  useEffect(() => {
+    setPageNumber(1);
+  }, [search, dateFilter]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setDateFilter("");
+  };
+
   const handleSave = async () => {
     if (!form.name) {
       toast.error("يرجى تعبئة الحقول المطلوبة");
@@ -153,8 +200,8 @@ const SemestersPage = () => {
   const handleEdit = (semester: Semester) => {
     setForm({
       name: semester.name,
-      startDate: semester.startDate ?? "",
-      endDate: semester.endDate ?? "",
+      startDate: formatDateForInput(semester.startDate),
+      endDate: formatDateForInput(semester.endDate),
     });
 
     setSelected(semester);
@@ -183,14 +230,42 @@ const SemestersPage = () => {
     }
   };
 
+  const hasActiveFilters = Boolean(search || dateFilter);
+
   return (
     <DashboardLayout title="الفصول" subtitle="إدارة الفصول الدراسية">
 
-      {/* إضافة */}
-      <div className="flex justify-end mb-6">
+      {/* بحث وفلترة + إضافة */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="بحث باسم الفصل..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-10"
+          />
+        </div>
+
+        <div className="w-full sm:w-56">
+          <Input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            placeholder="بحث بتاريخ"
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <Button variant="outline" onClick={handleResetFilters} className="gap-2 shrink-0">
+            <X className="h-4 w-4" />
+            إعادة تعيين
+          </Button>
+        )}
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 shrink-0">
               <Plus className="h-4 w-4" />
               إضافة فصل
             </Button>
@@ -264,67 +339,77 @@ const SemestersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {semesters.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((semester) => {
-                const hasDates = Boolean(semester.startDate && semester.endDate);
-                const status = hasDates
-                  ? getStatus(semester.startDate as string, semester.endDate as string)
-                  : { label: "غير مكتمل", color: "bg-yellow-500 text-white" };
+              {filteredSemesters.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-center text-muted-foreground" colSpan={5}>
+                    لا توجد نتائج مطابقة
+                  </td>
+                </tr>
+              ) : (
+                filteredSemesters.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((semester) => {
+                  const hasDates = Boolean(semester.startDate && semester.endDate);
+                  const status = hasDates
+                    ? getStatus(semester.startDate as string, semester.endDate as string)
+                    : { label: "غير مكتمل", color: "bg-yellow-500 text-white" };
 
-                return (
-                  <TableRowContextMenu
-                    key={semester.id}
-                    actions={[
-                      {
-                        label: "عرض الكورسات",
-                        icon: <BookMarked className="h-4 w-4" />,
-                        onSelect: () => handleShowCourses(semester),
-                      },
-                      {
-                        label: "تعديل",
-                        icon: <Pencil className="h-4 w-4" />,
-                        onSelect: () => handleEdit(semester),
-                      },
-                      {
-                        label: "حذف",
-                        icon: <Trash2 className="h-4 w-4" />,
-                        onSelect: () => setDeleteTarget(semester),
-                        destructive: true,
-                      },
-                    ]}
-                  >
-                    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-medium">{semester.name}</td>
-                      <td className="p-4">{semester.startDate ? formatDate(semester.startDate) : "-"}</td>
-                      <td className="p-4">{semester.endDate ? formatDate(semester.endDate) : "-"}</td>
-                      <td className="p-4">
-                        <Badge className={status.color}>{status.label}</Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(semester)}>
-                            <Pencil className="h-4 w-4 ml-1" />
-                            تعديل
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(semester)}>
-                            <Trash2 className="h-4 w-4 ml-1" />
-                            حذف
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  </TableRowContextMenu>
-                );
-              })}
+                  return (
+                    <TableRowContextMenu
+                      key={semester.id}
+                      actions={[
+                        {
+                          label: "عرض الكورسات",
+                          icon: <BookMarked className="h-4 w-4" />,
+                          onSelect: () => handleShowCourses(semester),
+                        },
+                        {
+                          label: "تعديل",
+                          icon: <Pencil className="h-4 w-4" />,
+                          onSelect: () => handleEdit(semester),
+                        },
+                        {
+                          label: "حذف",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          onSelect: () => setDeleteTarget(semester),
+                          destructive: true,
+                        },
+                      ]}
+                    >
+                      <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="p-4 font-medium">{semester.name}</td>
+                        <td className="p-4">{semester.startDate ? formatDate(semester.startDate) : "-"}</td>
+                        <td className="p-4">{semester.endDate ? formatDate(semester.endDate) : "-"}</td>
+                        <td className="p-4">
+                          <Badge className={status.color}>{status.label}</Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(semester)}>
+                              <Pencil className="h-4 w-4 ml-1" />
+                              تعديل
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(semester)}>
+                              <Trash2 className="h-4 w-4 ml-1" />
+                              حذف
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    </TableRowContextMenu>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
         <div className="flex items-center justify-between gap-4 mt-3">
-          <div />
+          <div className="text-sm text-muted-foreground">
+            إجمالي النتائج: {filteredSemesters.length}
+          </div>
           <Pagination
             currentPage={pageNumber}
-            totalPages={Math.max(1, Math.ceil(semesters.length / pageSize))}
+            totalPages={Math.max(1, Math.ceil(filteredSemesters.length / pageSize))}
             onPageChange={(page) => setPageNumber(page)}
           />
         </div>

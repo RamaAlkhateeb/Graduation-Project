@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import type { FieldValues } from 'react-hook-form';
 import { formApi, responseApi } from '../api/formApi';
-import type { FormDto } from '../types/form';
+import type { FormDto, FormResponseDto } from '../types/form';
 import QuestionRenderer from '../components/QuestionRenderer';
 
 export default function FormFillPage() {
@@ -12,6 +12,7 @@ export default function FormFillPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedResult, setSubmittedResult] = useState<FormResponseDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startTime = useRef(Date.now());
 
@@ -25,6 +26,11 @@ export default function FormFillPage() {
         .finally(() => setLoading(false));
     }
   }, [accessToken]);
+
+  // هل يحتوي الاختبار على أسئلة تحتاج تصحيح يدوي (نص قصير/طويل)؟
+  const hasManualGradedQuestions =
+    form?.formType === 'Quiz' &&
+    (form.questions || []).some((q) => q.questionType === 'ShortText' || q.questionType === 'LongText');
 
   const onSubmit = async (data: FieldValues) => {
     if (!form) return;
@@ -43,7 +49,8 @@ export default function FormFillPage() {
           return { questionId: q.id, selectedOptionIds: data[fieldName] ? [data[fieldName]] : [] };
         }
       });
-      await responseApi.submit({ formId: form.id, timeSpentSeconds, answers });
+      const result = await responseApi.submit({ formId: form.id, timeSpentSeconds, answers });
+      setSubmittedResult(result);
       setSubmitted(true);
     } catch {
       setError('فشل إرسال الرد. حاول مرة أخرى.');
@@ -76,6 +83,21 @@ export default function FormFillPage() {
             ✓
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">تم إرسال الرد!</h2>
+
+          {form?.formType === 'Quiz' && submittedResult && (
+            <div className="my-5 py-4 border-y border-border/60">
+              <p className="text-muted-foreground text-sm mb-1">نتيجتك</p>
+              <p className="text-4xl font-bold text-primary">{submittedResult.score ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">نقطة</p>
+
+              {hasManualGradedQuestions && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  يحتوي هذا الاختبار على أسئلة نصية تحتاج تصحيح المعلم، وقد تتغير نتيجتك بعد اكتمال التصحيح.
+                </p>
+              )}
+            </div>
+          )}
+
           <p className="text-muted-foreground">شكراً لإكمالك الاستبيان.</p>
         </div>
       </div>

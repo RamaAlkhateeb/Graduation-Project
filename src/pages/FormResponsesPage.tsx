@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { formApi, responseApi } from '../api/formApi';
+import * as XLSX from 'xlsx';
+import { formApi, responseApi, answerApi } from '../api/formApi';
 import type { FormDto, FormResponseDto } from '../types/form';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Copy, Check } from 'lucide-react';
+import { ChevronRight, Copy, Check, FileSpreadsheet } from 'lucide-react';
 
 export default function FormResponsesPage() {
   const { id } = useParams<{ id: string }>();
@@ -16,16 +17,29 @@ export default function FormResponsesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // ── تصحيح الأسئلة النصية يدويًا ──
+  const [gradingValues, setGradingValues] = useState<Record<string, string>>({});
+  const [savingAnswerId, setSavingAnswerId] = useState<string | null>(null);
+  const [gradingError, setGradingError] = useState<string | null>(null);
+
+  const loadData = async (formId: string) => {
+    try {
+      setLoading(true);
+      const [f, r] = await Promise.all([formApi.get(formId), responseApi.list(formId)]);
+      setForm(f);
+      setResponses(r);
+    } catch {
+      setError('فشل تحميل الردود');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
-      Promise.all([formApi.get(id), responseApi.list(id)])
-        .then(([f, r]) => {
-          setForm(f);
-          setResponses(r);
-        })
-        .catch(() => setError('فشل تحميل الردود'))
-        .finally(() => setLoading(false));
+      loadData(id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const copyLink = () => {
@@ -45,9 +59,93 @@ export default function FormResponsesPage() {
       ? Math.round(responses.reduce((sum, r) => sum + (r.timeSpentSeconds ?? 0), 0) / responses.length / 60)
       : null;
 
+  const getQuestionById = (questionId: string) =>
+    form?.questions.find((q) => q.id === questionId);
+
+  const isManualGradeQuestion = (questionType?: string) =>
+    questionType === 'ShortText' || questionType === 'LongText';
+
+  const handleGradeAnswer = async (answerId: string, maxPoints: number) => {
+    setGradingError(null);
+    const raw = gradingValues[answerId];
+    const parsed = Number(raw);
+
+    if (raw === undefined || raw.trim() === '' || Number.isNaN(parsed) || parsed < 0 || parsed > maxPoints) {
+      setGradingError(`أدخل درجة صحيحة بين 0 و ${maxPoints}`);
+      return;
+    }
+
+    try {
+      setSavingAnswerId(answerId);
+      await answerApi.grade(answerId, parsed);
+
+      if (id) {
+        await loadData(id);
+      }
+    } catch {
+      setGradingError('فشل حفظ الدرجة. تأكد من الاتصال بالخادم وحاول مرة أخرى.');
+    } finally {
+      setSavingAnswerId(null);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!form) return;
+
+    const sortedQuestions = [...(form.questions || [])].sort((a, b) => a.order - b.order);
+
+    const rows = responses.map((response, idx) => {
+      const row: Record<string, string | number> = {
+        '#': idx + 1,
+        'النوع': response.respondedByStudentId
+          ? 'طالب'
+          : response.respondedByTeacherId
+          ? 'أستاذ'
+          : 'مجهول',
+        'المعرف': response.respondedByStudentId || response.respondedByTeacherId || '-',
+        'تاريخ الإرسال': new Date(response.submittedAt).toLocaleString('ar'),
+        'الوقت المستغرق (دقيقة)':
+          response.timeSpentSeconds != null ? Math.round(response.timeSpentSeconds / 60) : '-',
+      };
+
+      if (form.formType === 'Quiz') {
+        row['الدرجة الإجمالية'] = response.score ?? 0;
+      }
+
+      sortedQuestions.forEach((question) => {
+        const answer = response.answers.find((a) => a.questionId === question.id);
+        let value: string = '-';
+
+        if (answer) {
+          if (answer.selectedOptions && answer.selectedOptions.length > 0) {
+            value = answer.selectedOptions.map((o) => o.text).join('، ');
+          } else if (answer.textAnswer) {
+            value = answer.textAnswer;
+          }
+        }
+
+        row[question.text] = value;
+
+        if (form.formType === 'Quiz' && isManualGradeQuestion(question.questionType)) {
+          row[`${question.text} - الدرجة الممنوحة`] =
+            answer?.pointsAwarded != null ? answer.pointsAwarded : 'بانتظار التصحيح';
+        }
+      });
+
+      return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'الردود');
+
+    const safeTitle = (form.title || 'نتائج').replace(/[\\/:*?"<>|]/g, '-');
+    XLSX.writeFile(workbook, `${safeTitle}-نتائج.xlsx`);
+  };
+
   return (
     <DashboardLayout title={form?.title || 'الردود'} subtitle="تحليلات الردود">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <Button asChild variant="ghost" size="sm" className="gap-1.5">
           <Link to="/form">
             <ChevronRight className="h-4 w-4" />
@@ -55,12 +153,25 @@ export default function FormResponsesPage() {
           </Link>
         </Button>
 
-        {form?.accessToken && (
-          <Button variant={copied ? 'default' : 'outline'} size="sm" className="gap-1.5" onClick={copyLink}>
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? 'تم النسخ!' : 'نسخ رابط المشاركة'}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleExportExcel}
+            disabled={!form || responses.length === 0}
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            تصدير Excel
           </Button>
-        )}
+
+          {form?.accessToken && (
+            <Button variant={copied ? 'default' : 'outline'} size="sm" className="gap-1.5" onClick={copyLink}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'تم النسخ!' : 'نسخ رابط المشاركة'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -71,6 +182,12 @@ export default function FormResponsesPage() {
         <>
           {error && (
             <div className="glass-card border-destructive/30 rounded-xl p-4 text-destructive mb-6">{error}</div>
+          )}
+
+          {gradingError && (
+            <div className="glass-card border-destructive/30 rounded-xl p-4 text-destructive mb-6">
+              {gradingError}
+            </div>
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -144,25 +261,75 @@ export default function FormResponsesPage() {
                   {expandedId === response.id && (
                     <div className="px-5 pb-5 border-t border-border/50">
                       <div className="mt-4 space-y-3">
-                        {(response.answers || []).map((answer) => (
-                          <div key={answer.id} className="bg-muted/40 rounded-xl p-4">
-                            <div className="text-sm font-semibold text-foreground mb-2">{answer.questionText}</div>
-                            {answer.textAnswer && (
-                              <div className="text-sm text-foreground/80 bg-background rounded-lg px-3 py-2 border border-border">
-                                {answer.textAnswer}
+                        {(response.answers || []).map((answer) => {
+                          const question = getQuestionById(answer.questionId);
+                          const needsManualGrading =
+                            form?.formType === 'Quiz' && isManualGradeQuestion(question?.questionType);
+                          const maxPoints = question?.points ?? 0;
+                          const currentInputValue =
+                            gradingValues[answer.id] ??
+                            (answer.pointsAwarded != null ? String(answer.pointsAwarded) : '');
+
+                          return (
+                            <div key={answer.id} className="bg-muted/40 rounded-xl p-4">
+                              <div className="text-sm font-semibold text-foreground mb-2">
+                                {answer.questionText}
                               </div>
-                            )}
-                            {answer.selectedOptions && answer.selectedOptions.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
-                                {answer.selectedOptions.map((opt) => (
-                                  <Badge key={opt.id} variant="secondary">
-                                    {opt.text}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+
+                              {answer.textAnswer && (
+                                <div className="text-sm text-foreground/80 bg-background rounded-lg px-3 py-2 border border-border mb-2">
+                                  {answer.textAnswer}
+                                </div>
+                              )}
+
+                              {answer.selectedOptions && answer.selectedOptions.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {answer.selectedOptions.map((opt) => (
+                                    <Badge key={opt.id} variant="secondary">
+                                      {opt.text}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+
+                              {needsManualGrading && (
+                                <div className="mt-3 flex items-center gap-2 flex-wrap pt-3 border-t border-border/60">
+                                  {answer.pointsAwarded == null ? (
+                                    <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                      بانتظار التصحيح
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary">
+                                      تم التصحيح: {answer.pointsAwarded} / {maxPoints}
+                                    </Badge>
+                                  )}
+
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={maxPoints}
+                                    value={currentInputValue}
+                                    onChange={(e) =>
+                                      setGradingValues((prev) => ({ ...prev, [answer.id]: e.target.value }))
+                                    }
+                                    className="w-20 h-8 px-2 text-sm border border-input rounded-md bg-background"
+                                    placeholder={`0-${maxPoints}`}
+                                  />
+                                  <span className="text-xs text-muted-foreground">من {maxPoints}</span>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={savingAnswerId === answer.id}
+                                    onClick={() => handleGradeAnswer(answer.id, maxPoints)}
+                                  >
+                                    {savingAnswerId === answer.id ? 'جارٍ الحفظ...' : 'حفظ الدرجة'}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

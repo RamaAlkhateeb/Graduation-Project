@@ -19,7 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Pencil, Trash2, BookMarked } from "lucide-react";
+import { Plus, Calendar, Pencil, Trash2, BookMarked, X } from "lucide-react";
 import { toast } from "sonner";
 import TableRowContextMenu from "@/components/TableRowContextMenu";
 import Pagination from "@/components/ui/pagination";
@@ -97,6 +97,13 @@ const CoursesPage = () => {
     });
 
     const pagedCourses = filteredCourses.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+
+    const hasActiveFilters = Boolean(search) || selectedSemester !== "all";
+
+    const handleResetFilters = () => {
+        setSearch("");
+        setSelectedSemester("all");
+    };
 
     const fetchSemesters = async () => {
         try {
@@ -243,6 +250,18 @@ const CoursesPage = () => {
                     </Select>
                 </div>
 
+                {hasActiveFilters && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleResetFilters}
+                        className="gap-2 shrink-0"
+                    >
+                        <X className="h-4 w-4" />
+                        إعادة تعيين
+                    </Button>
+                )}
+
                 <Dialog
                     open={open}
                     onOpenChange={(value) => {
@@ -251,7 +270,7 @@ const CoursesPage = () => {
                     }}
                 >
                     <DialogTrigger asChild>
-                        <Button className="gap-2">
+                        <Button className="gap-2 shrink-0">
                             <Plus className="h-4 w-4" />
                             إضافة كورس
                         </Button>
@@ -307,10 +326,18 @@ const CoursesPage = () => {
                             <tr className="border-b border-border bg-muted/50">
                                 <th className="p-4 text-right">اسم الكورس</th>
                                 <th className="p-4 text-right">الفصل</th>
+                                 <th className="p-4 text-right"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {pagedCourses.map((course) => (
+                            {pagedCourses.length === 0 ? (
+                                <tr>
+                                    <td className="p-4 text-center text-muted-foreground" colSpan={3}>
+                                        لا توجد نتائج مطابقة
+                                    </td>
+                                </tr>
+                            ) : (
+                                pagedCourses.map((course) => (
                                 <TableRowContextMenu
                                     key={course.id}
                                     actions={[
@@ -354,14 +381,17 @@ const CoursesPage = () => {
                                         </td>
                                     </tr>
                                 </TableRowContextMenu>
-                            ))}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div className="flex items-center justify-between gap-4 mt-3">
-                <div />
+                <div className="text-sm text-muted-foreground">
+                    إجمالي النتائج: {filteredCourses.length}
+                </div>
                 <Pagination
                     currentPage={pageNumber}
                     totalPages={Math.max(1, Math.ceil(filteredCourses.length / pageSize))}

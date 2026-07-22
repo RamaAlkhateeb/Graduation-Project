@@ -15,7 +15,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { Plus, Users, Pencil, Trash2, Eye } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { Plus, Users, Pencil, Trash2, Eye, Search, X } from "lucide-react";
 
 import { toast } from "sonner";
 
@@ -71,8 +79,8 @@ const CirclesPage = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [semesters, setSemesters] = useState<Semester[]>([]);
 
-const [selectedSemester, setSelectedSemester] = useState("all");
-const [selectedCourse, setSelectedCourse] = useState("all");
+  const [selectedSemester, setSelectedSemester] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
   const [students, setStudents] = useState<StudentBrief[]>([]);
 
   const [search, setSearch] = useState("");
@@ -108,10 +116,16 @@ const [selectedCourse, setSelectedCourse] = useState("all");
   }, [courses]);
 
   const courseById = useMemo(() => {
-  return new Map(
-    courses.map((course) => [course.id, course])
-  );
-}, [courses]);
+    return new Map(
+      courses.map((course) => [course.id, course])
+    );
+  }, [courses]);
+
+  // الكورسات المتاحة للاختيار: تعتمد على الفصل المحدد فقط
+  const filteredCourseOptions = useMemo(() => {
+    if (selectedSemester === "all") return [];
+    return courses.filter((course) => course.semesterId === selectedSemester);
+  }, [courses, selectedSemester]);
 
   const normalizeCollection = <T,>(response: T[] | PagedResponse<T>) => {
     if (Array.isArray(response)) {
@@ -130,42 +144,46 @@ const [selectedCourse, setSelectedCourse] = useState("all");
   };
 
   const filteredCircles = circles.filter((circle) => {
-  const course = courseById.get(circle.courseId ?? "");
+    const course = courseById.get(circle.courseId ?? "");
 
-  const matchesSearch =
-    (circle.className ?? "")
+    const matchesSearch = (circle.className ?? "")
       .toLowerCase()
       .includes(search.toLowerCase());
 
-  const matchesCourse =
-    selectedCourse === "all" ||
-    circle.courseId === selectedCourse;
+    const matchesCourse =
+      selectedCourse === "all" || circle.courseId === selectedCourse;
 
-  const matchesSemester =
-    selectedSemester === "all" ||
-    course?.semesterId === selectedSemester;
+    const matchesSemester =
+      selectedSemester === "all" || course?.semesterId === selectedSemester;
 
-  return (
-    matchesSearch &&
-    matchesCourse &&
-    matchesSemester
-  );
-});
+    return matchesSearch && matchesCourse && matchesSemester;
+  });
+
+  const hasActiveFilters =
+    Boolean(search) || selectedSemester !== "all" || selectedCourse !== "all";
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setSelectedSemester("all");
+    setSelectedCourse("all");
+  };
+
+  const handleSemesterChange = (value: string) => {
+    setSelectedSemester(value);
+    // إعادة تعيين الكورس دائماً عند تغيير الفصل لأن قائمة الكورسات تعتمد عليه
+    setSelectedCourse("all");
+  };
 
   const fetchSemesters = async () => {
-  try {
-    const response = await axiosClient.get<Semester[]>("/semesters");
+    try {
+      const response = await axiosClient.get<Semester[]>("/semesters");
 
-    setSemesters(
-      Array.isArray(response.data)
-        ? response.data
-        : []
-    );
-  } catch (error) {
-    console.error(error);
-    toast.error("تعذر تحميل الفصول");
-  }
-};
+      setSemesters(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error(error);
+      toast.error("تعذر تحميل الفصول");
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -217,10 +235,14 @@ const [selectedCourse, setSelectedCourse] = useState("all");
   };
 
   useEffect(() => {
-  fetchSemesters();
-  fetchCourses();
-  fetchCircles();
-}, []);
+    fetchSemesters();
+    fetchCourses();
+    fetchCircles();
+  }, []);
+
+  useEffect(() => {
+    setPageNumber(1);
+  }, [search, selectedSemester, selectedCourse]);
 
   const resetForm = () => {
     setForm(emptyHalaqaPayload);
@@ -296,59 +318,64 @@ const [selectedCourse, setSelectedCourse] = useState("all");
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
         <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="بحث عن حلقة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="pr-10"
           />
-          <select
-  className="border rounded-md h-10 px-3"
-  value={selectedSemester}
-  onChange={(e) => {
-    setSelectedSemester(e.target.value);
-
-    if (e.target.value !== "all") {
-      setSelectedCourse("all");
-    }
-  }}
->
-  <option value="all">جميع الفصول</option>
-
-  {semesters.map((semester) => (
-    <option
-      key={semester.id}
-      value={semester.id}
-    >
-      {semester.name}
-    </option>
-  ))}
-</select>
-
-<select
-  className="border rounded-md h-10 px-3"
-  value={selectedCourse}
-  onChange={(e) =>
-    setSelectedCourse(e.target.value)
-  }
->
-  <option value="all">جميع الكورسات</option>
-
-  {courses
-    .filter(
-      (course) =>
-        selectedSemester === "all" ||
-        course.semesterId === selectedSemester
-    )
-    .map((course) => (
-      <option
-        key={course.id}
-        value={course.id}
-      >
-        {course.courseName}
-      </option>
-    ))}
-</select>
         </div>
+
+        <Select value={selectedSemester} onValueChange={handleSemesterChange}>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue placeholder="اختر الفصل" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">جميع الفصول</SelectItem>
+            {semesters.map((semester) => (
+              <SelectItem key={semester.id} value={semester.id}>
+                {semester.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedCourse}
+          onValueChange={setSelectedCourse}
+          disabled={selectedSemester === "all"}
+        >
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue
+              placeholder={
+                selectedSemester === "all"
+                  ? "اختر الفصل أولاً"
+                  : "اختر الكورس"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">جميع الكورسات</SelectItem>
+            {filteredCourseOptions.map((course) => (
+              <SelectItem key={course.id} value={course.id}>
+                {course.courseName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResetFilters}
+            className="gap-2 shrink-0"
+          >
+            <X className="h-4 w-4" />
+            إعادة تعيين
+          </Button>
+        )}
 
         <Dialog
           open={open}
@@ -361,7 +388,7 @@ const [selectedCourse, setSelectedCourse] = useState("all");
           }}
         >
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 shrink-0">
               <Plus className="h-4 w-4" />
               إضافة حلقة
             </Button>
@@ -391,24 +418,26 @@ const [selectedCourse, setSelectedCourse] = useState("all");
 
               <div>
                 <Label>الكورس</Label>
-                <select
-                  className="w-full border rounded-md h-10 px-3"
-                  value={form.courseId}
-                  onChange={(e) =>
+                <Select
+                  value={form.courseId !== "" ? form.courseId : undefined}
+                  onValueChange={(courseId) =>
                     setForm({
                       ...form,
-                      courseId: e.target.value,
+                      courseId,
                     })
                   }
                 >
-                  <option value="">اختر الكورس</option>
-
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.courseName}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الكورس" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.courseName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button
@@ -430,12 +459,19 @@ const [selectedCourse, setSelectedCourse] = useState("all");
               <tr className="border-b border-border bg-muted/50">
                 <th className="p-4 text-right">اسم الحلقة</th>
                 <th className="p-4 text-right">الكورس</th>
-                <th className="p-4 text-right">الإجراءات</th>
+                <th className="p-4 text-right"></th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredCircles.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((circle) => (
+              {filteredCircles.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-center text-muted-foreground" colSpan={3}>
+                    لا توجد نتائج مطابقة
+                  </td>
+                </tr>
+              ) : (
+                filteredCircles.slice((pageNumber - 1) * pageSize, pageNumber * pageSize).map((circle) => (
                 <TableRowContextMenu
                   key={circle.id}
                   actions={[
@@ -505,14 +541,17 @@ const [selectedCourse, setSelectedCourse] = useState("all");
                     </td>
                   </tr>
                 </TableRowContextMenu>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
         <div className="flex items-center justify-between gap-4 mt-3">
-          <div />
+          <div className="text-sm text-muted-foreground">
+            إجمالي النتائج: {filteredCircles.length}
+          </div>
           <Pagination
             currentPage={pageNumber}
             totalPages={Math.max(1, Math.ceil(filteredCircles.length / pageSize))}
