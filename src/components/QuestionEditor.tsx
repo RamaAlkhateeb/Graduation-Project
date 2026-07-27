@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useState } from 'react';
+import { Copy, Trash2 } from 'lucide-react';
 import type { FormQuestionDto, QuestionType } from '../types/form';
 import StylePanel from './StylePanel';
 
@@ -8,6 +9,8 @@ interface QuestionEditorProps {
   isQuiz: boolean;
   onChange: (updated: FormQuestionDto) => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
+  isFocused?: boolean;
 }
 
 // عدّل القائمة:
@@ -29,7 +32,7 @@ const COLUMN_SPAN_OPTIONS = [
 
 
 
-const QuestionEditor: FC<QuestionEditorProps> = ({ question, isQuiz, onChange, onDelete }) => {
+const QuestionEditor: FC<QuestionEditorProps> = ({ question, isQuiz, onChange, onDelete, onDuplicate, isFocused }) => {
   const [showStyle, setShowStyle] = useState(false);
 
   const update = (patch: Partial<FormQuestionDto>) => onChange({ ...question, ...patch });
@@ -57,7 +60,11 @@ const QuestionEditor: FC<QuestionEditorProps> = ({ question, isQuiz, onChange, o
   const needsOptions = ['MultipleChoice', 'Checkbox', 'Dropdown'].includes(question.questionType);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow ${
+        isFocused ? 'border-emerald-500 ring-2 ring-emerald-500/30' : 'border-gray-200'
+      }`}
+    >
       <div className="p-5 space-y-4">
         {/* Header row */}
         <div className="flex items-start gap-3">
@@ -191,12 +198,27 @@ const QuestionEditor: FC<QuestionEditorProps> = ({ question, isQuiz, onChange, o
               </div>
             )}
           </div>
-          <button
-            onClick={onDelete}
-            className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
-          >
-            🗑 Delete
-          </button>
+          <div className="flex items-center gap-1">
+            {onDuplicate && (
+              <button
+                onClick={onDuplicate}
+                title="تكرار السؤال"
+                aria-label="تكرار السؤال"
+                className="p-2 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              title="حذف السؤال"
+              aria-label="حذف السؤال"
+              className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="text-sm font-medium">حذف</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

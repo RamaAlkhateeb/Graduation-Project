@@ -29,19 +29,50 @@ import QuestionEditor from '../components/QuestionEditor';
 import { FONT_FAMILIES_GROUPED } from '../config';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Eye } from 'lucide-react'; 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { ChevronRight, Eye, Type, AlignLeft, CircleDot, CheckSquare, List, Plus } from 'lucide-react';
 import { useT } from '../i18n';
+
+// ─── شريط أدوات إضافة الأسئلة (أيقونات فقط) ────────────────────────────────
+const questionTypeToolbar: {
+  type: QuestionType;
+  label: string;
+  icon: typeof Type;
+  shortcut: string;
+}[] = [
+  { type: 'ShortText', label: 'إجابة قصيرة', icon: Type, shortcut: 'Alt+1' },
+  { type: 'LongText', label: 'نص طويل', icon: AlignLeft, shortcut: 'Alt+2' },
+  { type: 'MultipleChoice', label: 'خيارات متعددة', icon: CircleDot, shortcut: 'Alt+3' },
+  { type: 'Checkbox', label: 'مربعات اختيار', icon: CheckSquare, shortcut: 'Alt+4' },
+  { type: 'Dropdown', label: 'قائمة منسدلة', icon: List, shortcut: 'Alt+5' },
+];
 
 function SortableQuestion({
   question,
   isQuiz,
+  isFocused,
+  onFocusQuestion,
   onChange,
   onDelete,
+  onDuplicate,
 }: {
   question: FormQuestionDto;
   isQuiz: boolean;
+  isFocused: boolean;
+  onFocusQuestion: () => void;
   onChange: (q: FormQuestionDto) => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: question.id });
@@ -54,13 +85,14 @@ function SortableQuestion({
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} onFocusCapture={onFocusQuestion} onClick={onFocusQuestion}>
       <div className="flex items-start gap-2">
         <button
           {...attributes}
           {...listeners}
           className="mt-4 p-1 text-gray-400 hover:text-emerald-700 cursor-grab active:cursor-grabbing"
           title="سحب لإعادة الترتيب"
+          aria-label="سحب لإعادة الترتيب"
         >
           ⠿
         </button>
@@ -68,8 +100,10 @@ function SortableQuestion({
           <QuestionEditor
             question={question}
             isQuiz={isQuiz}
+            isFocused={isFocused}
             onChange={onChange}
             onDelete={onDelete}
+            onDuplicate={onDuplicate}
           />
         </div>
       </div>
@@ -100,6 +134,10 @@ export default function FormBuilderPage() {
   const [fontFamily, setFontFamily] = useState('Inter');
   const [questions, setQuestions] = useState<FormQuestionDto[]>([]);
   const [showStylePanel, setShowStylePanel] = useState(false);
+
+  // ── تتبّع السؤال المركّز عليه لتمييز الأيقونة المطابقة في الشريط الجانبي ──
+  const [focusedQuestionId, setFocusedQuestionId] = useState<string | null>(null);
+  const [mobileAddOpen, setMobileAddOpen] = useState(false);
 
   const formSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const questionSaveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -351,9 +389,40 @@ export default function FormBuilderPage() {
         options: [],
       });
       setQuestions(qs => [...qs, created]);
+      setFocusedQuestionId(created.id);
       scheduleFormSave();
     } catch {
       setError('فشل في إضافة السؤال.');
+    } finally {
+      setMobileAddOpen(false);
+    }
+  };
+
+  const duplicateQuestion = async (idx: number) => {
+    if (!id) return;
+    const source = questionsRef.current[idx];
+    if (!source) return;
+
+    try {
+      const created = await questionApi.create({
+        formId: id,
+        text: source.text,
+        description: source.description,
+        questionType: source.questionType,
+        order: questionsRef.current.length,
+        isRequired: source.isRequired,
+        points: source.points,
+        columnSpan: source.columnSpan,
+        labelColor: source.labelColor,
+        fontSize: source.fontSize,
+        fontFamily: source.fontFamily,
+        options: source.options.map(o => ({ text: o.text, order: o.order, isCorrect: o.isCorrect })),
+      });
+      setQuestions(qs => [...qs, created]);
+      setFocusedQuestionId(created.id);
+      scheduleFormSave();
+    } catch {
+      setError('فشل في تكرار السؤال.');
     }
   };
 
@@ -409,7 +478,31 @@ export default function FormBuilderPage() {
       }
     }
     setQuestions(qs => qs.filter((_, i) => i !== idx).map((q, i) => ({ ...q, order: i })));
+    setFocusedQuestionId(prev => (prev === q.id ? null : prev));
   };
+
+  // ── اختصارات لوحة المفاتيح: Alt+1..5 لإضافة سؤال بنوع محدد ──
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey || loading) return;
+      const index = Number(e.key) - 1;
+      if (index >= 0 && index < questionTypeToolbar.length) {
+        e.preventDefault();
+        addQuestion(questionTypeToolbar[index].type);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, id]);
+
+  // ── عدد الأسئلة حسب النوع، لعرضها كـ badge على كل أيقونة ──
+  const questionTypeCounts = questions.reduce<Record<string, number>>((acc, q) => {
+    acc[q.questionType] = (acc[q.questionType] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const focusedQuestionType = questions.find(q => q.id === focusedQuestionId)?.questionType;
 
   if (loading) {
     return (
@@ -450,187 +543,232 @@ export default function FormBuilderPage() {
         )}
       </div>
 
-      <div className="max-w-5xl mx-auto space-y-6" dir="rtl" style={{ fontFamily }}>
-        {/* Form header card */}
-        <div className="glass-card rounded-xl border-t-4 p-6 space-y-4 shadow-sm" style={{ borderTopColor: primaryColor }}>
-          <textarea
-            value={title}
-            onChange={e => handleTitleChange(e.target.value)}
-            placeholder="عنوان النموذج"
-            rows={1}
-            className="w-full text-3xl font-bold text-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
-          />
-          <textarea
-            value={description}
-            onChange={e => handleDescriptionChange(e.target.value)}
-            placeholder="وصف النموذج (اختياري)"
-            rows={2}
-            className="w-full text-base text-muted-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
-          />
+      <TooltipProvider delayDuration={200}>
+        <div className="max-w-6xl mx-auto" dir="rtl" style={{ fontFamily }}>
+          <div className="flex items-start gap-4">
+            {/* ── العمود الرئيسي: إعدادات النموذج + الأسئلة ── */}
+            <div className="flex-1 min-w-0 space-y-6">
+              {/* Form header card */}
+              <div className="glass-card rounded-xl border-t-4 p-6 space-y-4 shadow-sm" style={{ borderTopColor: primaryColor }}>
+                <textarea
+                  value={title}
+                  onChange={e => handleTitleChange(e.target.value)}
+                  placeholder="عنوان النموذج"
+                  rows={1}
+                  className="w-full text-3xl font-bold text-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
+                />
+                <textarea
+                  value={description}
+                  onChange={e => handleDescriptionChange(e.target.value)}
+                  placeholder="وصف النموذج (اختياري)"
+                  rows={2}
+                  className="w-full text-base text-muted-foreground border-none outline-none resize-none bg-transparent placeholder:text-muted-foreground/50"
+                />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-emerald-100">
-            <div>
-              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">نوع النموذج</label>
-              <select
-                value={formType}
-                onChange={e => handleFormTypeChange(e.target.value as FormType)}
-                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              >
-                <option value="Normal">استبيان</option>
-                <option value="Quiz">اختبار</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">الفئة المستهدفة</label>
-              <select
-                value={audience}
-                onChange={e => handleAudienceChange(e.target.value as AudienceType)}
-                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              >
-                <option value="Students">الطلاب</option>
-                <option value="Teachers">المعلمون</option>
-                <option value="Both">الجميع</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">المؤقت (بالدقائق)</label>
-              <input
-                type="number"
-                value={timerMinutes || ''}
-                onChange={e => handleTimerChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="بدون مؤقت"
-                min={1}
-                className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-            </div>
-            <div className="flex flex-col gap-3 pt-2">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div
-                  onClick={handleIsActiveToggle}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${isActive ? 'bg-emerald-600' : 'bg-gray-300'}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isActive ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
-                </div>
-                <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">النموذج نشط</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div
-                  onClick={handleAllowMultipleToggle}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${allowMultipleResponses ? 'bg-emerald-600' : 'bg-gray-300'}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowMultipleResponses ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
-                </div>
-                <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">السماح بأكثر من رد</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-emerald-100">
-            <button
-              onClick={() => setShowStylePanel(s => !s)}
-              className="text-sm font-medium text-emerald-700 hover:text-emerald-900 flex items-center gap-2 transition-colors"
-            >
-              🎨 {showStylePanel ? 'إخفاء' : 'إظهار'} إعدادات مظهر النموذج
-            </button>
-            {showStylePanel && (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
-                <div>
-                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">اللون الأساسي</label>
-                  <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-emerald-100">
+                  <div>
+                    <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">نوع النموذج</label>
+                    <select
+                      value={formType}
+                      onChange={e => handleFormTypeChange(e.target.value as FormType)}
+                      className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    >
+                      <option value="Normal">استبيان</option>
+                      <option value="Quiz">اختبار</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">الفئة المستهدفة</label>
+                    <select
+                      value={audience}
+                      onChange={e => handleAudienceChange(e.target.value as AudienceType)}
+                      className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    >
+                      <option value="Students">الطلاب</option>
+                      <option value="Teachers">المعلمون</option>
+                      <option value="Both">الجميع</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide">المؤقت (بالدقائق)</label>
                     <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={e => handlePrimaryColorChange(e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
+                      type="number"
+                      value={timerMinutes || ''}
+                      onChange={e => handleTimerChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                      placeholder="بدون مؤقت"
+                      min={1}
+                      className="mt-1 w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                     />
-                    <span className="text-xs font-mono text-muted-foreground">{primaryColor.toUpperCase()}</span>
+                  </div>
+                  <div className="flex flex-col gap-3 pt-2">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={handleIsActiveToggle}
+                        className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${isActive ? 'bg-emerald-600' : 'bg-gray-300'}`}
+                      >
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isActive ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
+                      </div>
+                      <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">النموذج نشط</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={handleAllowMultipleToggle}
+                        className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${allowMultipleResponses ? 'bg-emerald-600' : 'bg-gray-300'}`}
+                      >
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowMultipleResponses ? 'translate-x-[-1.25rem]' : 'translate-x-[-0.1rem]'}`} />
+                      </div>
+                      <span className="text-sm font-medium text-foreground group-hover:text-emerald-700">السماح بأكثر من رد</span>
+                    </label>
                   </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">لون الخلفية</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={backgroundColor}
-                      onChange={e => handleBackgroundColorChange(e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
-                    />
-                    <span className="text-xs font-mono text-muted-foreground">{backgroundColor.toUpperCase()}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">خط الكتابة</label>
-                  <select
-                    value={fontFamily}
-                    onChange={e => handleFontFamilyChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500"
-                    style={{ fontFamily }}
+
+                <div className="pt-2 border-t border-emerald-100">
+                  <button
+                    onClick={() => setShowStylePanel(s => !s)}
+                    className="text-sm font-medium text-emerald-700 hover:text-emerald-900 flex items-center gap-2 transition-colors"
                   >
-                    {FONT_FAMILIES_GROUPED.map(group => (
-                      <optgroup key={group.group} label={group.group}>
-                        {group.fonts.map(f => (
-                          <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                    🎨 {showStylePanel ? 'إخفاء' : 'إظهار'} إعدادات مظهر النموذج
+                  </button>
+                  {showStylePanel && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                      <div>
+                        <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">اللون الأساسي</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={primaryColor}
+                            onChange={e => handlePrimaryColorChange(e.target.value)}
+                            className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
+                          />
+                          <span className="text-xs font-mono text-muted-foreground">{primaryColor.toUpperCase()}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">لون الخلفية</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={backgroundColor}
+                            onChange={e => handleBackgroundColorChange(e.target.value)}
+                            className="w-10 h-10 rounded cursor-pointer border-none p-0 overflow-hidden shadow-sm"
+                          />
+                          <span className="text-xs font-mono text-muted-foreground">{backgroundColor.toUpperCase()}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-emerald-800 uppercase tracking-wide block mb-2">خط الكتابة</label>
+                        <select
+                          value={fontFamily}
+                          onChange={e => handleFontFamilyChange(e.target.value)}
+                          className="w-full px-3 py-2 border border-emerald-100 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500"
+                          style={{ fontFamily }}
+                        >
+                          {FONT_FAMILIES_GROUPED.map(group => (
+                            <optgroup key={group.group} label={group.group}>
+                              {group.fonts.map(f => (
+                                <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+
+              {/* Questions */}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-wrap gap-4">
+                    {questions.map((question, idx) => (
+                      <SortableQuestion
+                        key={question.id}
+                        question={question}
+                        isQuiz={formType === 'Quiz'}
+                        isFocused={focusedQuestionId === question.id}
+                        onFocusQuestion={() => setFocusedQuestionId(question.id)}
+                        onChange={updated => updateQuestion(idx, updated)}
+                        onDelete={() => deleteQuestion(idx)}
+                        onDuplicate={() => duplicateQuestion(idx)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              {questions.length === 0 && (
+                <div className="text-center py-12 text-sm text-muted-foreground border-2 border-dashed border-emerald-200 rounded-xl">
+                  لا توجد أسئلة بعد. استخدم شريط الأدوات {typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'على اليمين' : 'أدناه'} لإضافة أول سؤال.
+                </div>
+              )}
+            </div>
+
+            {/* ── شريط الأدوات الجانبي بالأيقونات فقط — للشاشات الكبيرة ── */}
+            <div className="hidden lg:flex flex-col gap-1.5 sticky top-6 shrink-0 bg-white/90 backdrop-blur-sm rounded-2xl border border-emerald-600/10 p-2 shadow-sm">
+              {questionTypeToolbar.map(({ type, label, icon: Icon, shortcut }) => {
+                const count = questionTypeCounts[type] ?? 0;
+                const isActiveType = focusedQuestionType === type;
+                return (
+                  <Tooltip key={type}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => addQuestion(type)}
+                        aria-label={`إضافة سؤال: ${label}`}
+                        className={`relative w-12 h-12 flex items-center justify-center rounded-xl border-2 transition-all shadow-sm ${
+                          isActiveType
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-emerald-600/20 bg-white text-emerald-700 hover:bg-emerald-600 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {count > 0 && (
+                          <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="text-xs">
+                      <p className="font-medium">{label}</p>
+                      <p className="text-muted-foreground">{shortcut}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Questions */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-wrap gap-4">
-              {questions.map((question, idx) => (
-                <SortableQuestion
-                  key={question.id}
-                  question={question}
-                  isQuiz={formType === 'Quiz'}
-                  onChange={updated => updateQuestion(idx, updated)}
-                  onDelete={() => deleteQuestion(idx)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-
-        {/* Add question buttons */}
-        <div className="flex flex-wrap gap-3 justify-center py-8 border-t border-dashed border-emerald-200">
-          <button
-            onClick={() => addQuestion('ShortText')}
-            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-          >
-            + إجابة قصيرة
-          </button>
-          <button
-            onClick={() => addQuestion('LongText')}
-            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-          >
-            + نص طويل
-          </button>
-          <button
-            onClick={() => addQuestion('MultipleChoice')}
-            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-          >
-            + خيارات متعددة
-          </button>
-          <button
-            onClick={() => addQuestion('Checkbox')}
-            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-          >
-            + مربعات اختيار
-          </button>
-          <button
-            onClick={() => addQuestion('Dropdown')}
-            className="px-5 py-2.5 text-sm font-bold text-emerald-700 border-2 border-emerald-600/20 bg-white rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-          >
-            + قائمة منسدلة
-          </button>
+        {/* ── زر عائم (FAB) لإضافة سؤال — للشاشات الصغيرة فقط ── */}
+        <div className="lg:hidden fixed bottom-6 left-6 z-40" dir="rtl">
+          <Popover open={mobileAddOpen} onOpenChange={setMobileAddOpen}>
+            <PopoverTrigger asChild>
+              <button
+                aria-label="إضافة سؤال جديد"
+                className="w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg flex items-center justify-center hover:bg-emerald-700 transition-colors"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="end" className="w-auto p-2">
+              <div className="flex flex-col gap-1">
+                {questionTypeToolbar.map(({ type, label, icon: Icon }) => (
+                  <button
+                    key={type}
+                    onClick={() => addQuestion(type)}
+                    aria-label={`إضافة سؤال: ${label}`}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-emerald-800 hover:bg-emerald-50 transition-colors text-right"
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
-      </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 }
