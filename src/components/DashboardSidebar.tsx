@@ -24,7 +24,7 @@ const menuItems = [
   { icon: Users, label: "الأساتذة", path: "/teachers" },
   { icon: GraduationCap, label: "الطلاب", path: "/students" },
   { icon: Users, label: "التسجيلات", path: "/enrollments" },
-  { icon: ClipboardCheck, label: "تسجيل الحضور", path: "/attendance/daily" },
+  { icon: ClipboardCheck, label: "تسجيل الحضور", path: "/attendance" },
   { icon: FileText, label: "الاستبيانات والاختبارات", path: "/form" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: MessageSquare, label: "الملاحظات", path: "/notes" },

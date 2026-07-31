@@ -22,6 +22,9 @@ import FormFillPage from './pages/FormFillPage';
 import FormResponsesPage from './pages/FormResponsesPage';
 import NotesPage from "./pages/NotesPage";
 import NotFound from "./pages/NotFound";
+import AttendanceChooserPage from "./pages/AttendanceChooserPage";
+import AttendanceCheckInPage from "./pages/AttendanceCheckInPage";
+import AttendanceCheckOutPage from "./pages/AttendanceCheckOutPage";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +45,9 @@ const App = () => (
           <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
           <Route path="/enrollments" element={<EnrollmentsPage />} />
           <Route path="/attendance/daily" element={<DailyAttendancePage/>}/>
+          <Route path="/attendance" element={<AttendanceChooserPage />} />
+<Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
+<Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
           <Route path="/form" element={<FormListPage />} />
