@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,8 +50,9 @@ const LoginPage = () => {
 
       toast.success("تم تسجيل الدخول بنجاح");
 
-      // تحويل للوحة التحكم
-      window.location.href = "/index";
+      
+      navigate("/index");
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);
