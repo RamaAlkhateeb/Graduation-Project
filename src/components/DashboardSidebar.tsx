@@ -38,14 +38,14 @@ const DashboardSidebar = () => {
     <>
       {/* Mobile button */}
       <button
-        className="fixed top-4 right-4 z-50 lg:hidden rounded-lg bg-green-700 p-2 text-white shadow-lg"
+        className="fixed top-4 right-4 z-50 lg:hidden print:hidden rounded-lg bg-green-700 p-2 text-white shadow-lg"
         onClick={() => setCollapsed(!collapsed)}
       >
         <Menu className="h-5 w-5" />
       </button>
 
       <aside
-        className={`fixed top-0 right-0 h-screen z-40 transition-all duration-300 flex flex-col bg-white border-l shadow-sm ${
+        className={`fixed top-0 right-0 h-screen z-40 print:hidden transition-all duration-300 flex flex-col bg-white border-l shadow-sm ${
           collapsed ? "w-20" : "w-64"
         } ${collapsed ? "max-lg:-translate-x-full" : ""} lg:translate-x-0`}
       >
@@ -122,7 +122,7 @@ const DashboardSidebar = () => {
 
       {/* Spacer */}
       <div
-        className={`hidden lg:block flex-shrink-0 transition-all duration-300 ${
+        className={`hidden lg:block print:hidden flex-shrink-0 transition-all duration-300 ${
           collapsed ? "w-20" : "w-64"
         }`}
       />

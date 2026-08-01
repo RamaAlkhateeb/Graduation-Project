@@ -10,9 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 interface Semester {
   id: string;
@@ -39,10 +38,26 @@ interface HalaqaStudent {
   parentPhoneNumber?: string;
 }
 
+interface CurrentAttendanceItem {
+  enrollmentId: string;
+  studentId: string;
+  studentName: string;
+  halaqaName: string;
+  startTime: string;
+  endTime: string | null;
+  numberOfTeachers: number;
+  status: string;
+}
+
 interface PagedResponse<T> {
   items?: T[];
   data?: T[];
 }
+
+type HalaqaStudentsResponse = { data?: HalaqaStudent[] } | HalaqaStudent[];
+type CurrentAttendanceResponse =
+  | { data?: CurrentAttendanceItem[] }
+  | CurrentAttendanceItem[];
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
@@ -64,6 +79,7 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
 
   const [students, setStudents] = useState<HalaqaStudent[]>([]);
   const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
+  const [onlineStudentIds, setOnlineStudentIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const [semestersLoading, setSemestersLoading] = useState(false);
@@ -145,11 +161,9 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
   const fetchStudents = async (halaqaId: string) => {
     try {
       setStudentsLoading(true);
-      const response = await axiosClient.get<
-  { data?: HalaqaStudent[] } | HalaqaStudent[]
->(
-  `/attendance-management/halaqas/${halaqaId}/students`
-);
+      const response = await axiosClient.get<HalaqaStudentsResponse>(
+        `/attendance-management/halaqas/${halaqaId}/students`
+      );
 
       const payload = response.data;
       const list = Array.isArray(payload)
@@ -157,13 +171,39 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
         : normalizeCollection(payload as PagedResponse<HalaqaStudent>);
 
       setStudents(list);
-      setMarkedIds(new Set());
     } catch (error) {
       console.error(error);
       toast.error("تعذر تحميل طلاب الحلقة");
       setStudents([]);
     } finally {
       setStudentsLoading(false);
+    }
+  };
+
+  // جلب حالة الحضور الحالية للحلقة، لمعرفة الطلاب المسجَّلين حضورهم (Online) الآن
+  const fetchCurrentAttendance = async (halaqaId: string) => {
+    try {
+      const response = await axiosClient.get<CurrentAttendanceResponse>(
+        `/attendance-management/halaqas/${halaqaId}/current-attendance`
+      );
+
+      const payload = response.data;
+      const list = Array.isArray(payload) ? payload : payload?.data ?? [];
+
+      const onlineIds = new Set(
+        list
+          .filter((item) => item.status === "Online")
+          .map((item) => item.studentId)
+      );
+
+      setOnlineStudentIds(onlineIds);
+
+      // في وضع تسجيل الحضور: الطلاب الأونلاين هم أصلاً "مسجَّلون" فتظهر لهم علامة الصح مباشرة
+      if (isAttendMode) {
+        setMarkedIds(new Set(onlineIds));
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -180,6 +220,7 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
     setHalaqas([]);
     setStudents([]);
     setMarkedIds(new Set());
+    setOnlineStudentIds(new Set());
 
     if (semesterId) {
       fetchCourses(semesterId);
@@ -192,6 +233,7 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
     setHalaqas([]);
     setStudents([]);
     setMarkedIds(new Set());
+    setOnlineStudentIds(new Set());
 
     if (courseId) {
       fetchHalaqas(courseId);
@@ -202,9 +244,11 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
     setSelectedHalaqaId(halaqaId);
     setStudents([]);
     setMarkedIds(new Set());
+    setOnlineStudentIds(new Set());
 
     if (halaqaId) {
       fetchStudents(halaqaId);
+      fetchCurrentAttendance(halaqaId);
     }
   };
 
@@ -221,6 +265,19 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
       );
 
       setMarkedIds((prev) => new Set(prev).add(student.studentId));
+
+      if (isAttendMode) {
+        // بعد تسجيل الحضور يصبح الطالب أونلاين
+        setOnlineStudentIds((prev) => new Set(prev).add(student.studentId));
+      } else {
+        // بعد تسجيل الخروج لم يعد الطالب أونلاين، فيختفي من قائمة "تسجيل الخروج"
+        setOnlineStudentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(student.studentId);
+          return next;
+        });
+      }
+
       toast.success(
         isAttendMode
           ? `تم تسجيل حضور ${student.name}`
@@ -238,6 +295,12 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
     }
   };
 
+  // في وضع تسجيل الحضور تظهر كل قائمة الطلاب
+  // في وضع تسجيل الخروج تظهر فقط الطلاب الذين حالتهم أونلاين حاليًا
+  const displayedStudents = isAttendMode
+    ? students
+    : students.filter((student) => onlineStudentIds.has(student.studentId));
+
   const markedCount = markedIds.size;
 
   return (
@@ -246,7 +309,7 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
       subtitle={
         isAttendMode
           ? "اختر الفصل ثم الكورس ثم الحلقة لعرض الطلاب وتسجيل حضورهم"
-          : "اختر الفصل ثم الكورس ثم الحلقة لعرض الطلاب وتسجيل خروجهم"
+          : "اختر الفصل ثم الكورس ثم الحلقة لعرض الطلاب الحاضرين حاليًا وتسجيل خروجهم"
       }
     >
       <Card className="p-5 glass-card mb-6">
@@ -323,8 +386,10 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
         {selectedHalaqaId && (
           <div className="grid grid-cols-2 gap-3 mt-5">
             <div className="rounded-lg bg-muted/50 p-3 text-center">
-              <p className="text-xs text-muted-foreground">إجمالي الطلاب</p>
-              <p className="text-2xl font-bold">{students.length}</p>
+              <p className="text-xs text-muted-foreground">
+                {isAttendMode ? "إجمالي الطلاب" : "الحاضرون حالياً"}
+              </p>
+              <p className="text-2xl font-bold">{displayedStudents.length}</p>
             </div>
             <div className="rounded-lg bg-primary/10 p-3 text-center">
               <p className="text-xs text-muted-foreground">
@@ -368,16 +433,18 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
                 </tr>
               )}
 
-              {selectedHalaqaId && !studentsLoading && students.length === 0 && (
+              {selectedHalaqaId && !studentsLoading && displayedStudents.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                    لا يوجد طلاب مسجلون في هذه الحلقة.
+                    {isAttendMode
+                      ? "لا يوجد طلاب مسجلون في هذه الحلقة."
+                      : "لا يوجد طلاب حاضرون حالياً في هذه الحلقة."}
                   </td>
                 </tr>
               )}
 
               {!studentsLoading &&
-                students.map((student, index) => {
+                displayedStudents.map((student, index) => {
                   const isMarked = markedIds.has(student.studentId);
                   const isPending = pendingId === student.studentId;
 
@@ -393,11 +460,19 @@ const AttendanceActionPage = ({ mode }: AttendanceActionPageProps) => {
                       <td className="px-4 py-3 text-center">
                         {isPending ? (
                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground inline" />
+                        ) : isMarked ? (
+                          <span
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                            title={isAttendMode ? "تم تسجيل الحضور" : "تم تسجيل الخروج"}
+                          >
+                            <Check className="h-4 w-4" />
+                          </span>
                         ) : (
-                          <Checkbox
-                            checked={isMarked}
-                            disabled={isMarked}
-                            onCheckedChange={() => handleToggleStudent(student)}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStudent(student)}
+                            aria-label={isAttendMode ? "تسجيل حضور" : "تسجيل خروج"}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-muted-foreground/40 hover:border-primary transition-colors"
                           />
                         )}
                       </td>
