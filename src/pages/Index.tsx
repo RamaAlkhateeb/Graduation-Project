@@ -3,12 +3,23 @@ import axios from "axios";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatCard from "@/components/StatCard";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Users,
   GraduationCap,
   BookOpen,
   ClipboardCheck,
   Activity,
   PieChart as PieIcon,
+  Trophy,
+  AlertTriangle,
+  Medal,
+  CalendarDays,
 } from "lucide-react";
 import {
   BarChart,
@@ -26,6 +37,13 @@ import { toast } from "sonner";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://alashmar.runasp.net/api";
+
+const ALL_SEMESTERS = "all";
+
+interface Semester {
+  id: string;
+  name: string;
+}
 
 interface PagedResponse<T> {
   items?: T[];
@@ -87,6 +105,22 @@ interface PointsOverviewReport {
   teacherPointsGiven: TeacherPointsGivenDetail[];
 }
 
+interface SemesterOverviewReport {
+  semesterId: string;
+  semesterName: string;
+  startDate: string;
+  endDate: string;
+  statistics: {
+    totalStudents: number | string;
+    totalTeachers: number | string;
+    totalClasses: number | string;
+    totalQuranPagesMemorized: number | string;
+    totalHadithsMemorized: number | string;
+    totalPointsGiven: number | string;
+    averageAttendancePercentage: number | string;
+  };
+}
+
 interface MeResponse {
   name?: string;
   fullName?: string;
@@ -103,6 +137,9 @@ const Card = ({ children }) => (
 );
 
 const Index = () => {
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string>(ALL_SEMESTERS);
+
   const [studentCount, setStudentCount] = useState(0);
   const [teacherCount, setTeacherCount] = useState(0);
   const [circleCount, setCircleCount] = useState(0);
@@ -177,6 +214,37 @@ const Index = () => {
     ];
   }, [pointsOverview]);
 
+  // لوحة صدارة الطلاب — أعلى 5 حسب مجموع النقاط
+  const topStudentsLeaderboard = useMemo(
+    () =>
+      (pointsOverview?.studentPointsDetails ?? [])
+        .slice()
+        .sort((a, b) => Number(b.totalPoints) - Number(a.totalPoints))
+        .slice(0, 5),
+    [pointsOverview]
+  );
+
+  // أفضل الأساتذة تفاعلاً — أعلى 5 حسب النقاط الممنوحة
+  const topTeachersLeaderboard = useMemo(
+    () =>
+      (pointsOverview?.teacherPointsGiven ?? [])
+        .slice()
+        .sort((a, b) => Number(b.totalPointsGiven) - Number(a.totalPointsGiven))
+        .slice(0, 5),
+    [pointsOverview]
+  );
+
+  // الطلاب الأكثر غياباً — أعلى 5 حسب عدد أيام الغياب
+  const mostAbsentStudents = useMemo(
+    () =>
+      (attendanceOverview?.studentAttendanceDetails ?? [])
+        .filter((student) => Number(student.absentDays) > 0)
+        .slice()
+        .sort((a, b) => Number(b.absentDays) - Number(a.absentDays))
+        .slice(0, 5),
+    [attendanceOverview]
+  );
+
   const recentActivities = useMemo(() => {
     const studentAttendance = attendanceOverview?.studentAttendanceDetails ?? [];
     const studentPoints = pointsOverview?.studentPointsDetails ?? [];
@@ -242,11 +310,46 @@ const Index = () => {
     return items;
   }, [attendanceOverview, pointsOverview]);
 
-  const dashboardSubtitle =
-    dashboardUser?.name || dashboardUser?.fullName || dashboardUser?.userName
-      ? `مرحبًا ${dashboardUser?.name || dashboardUser?.fullName || dashboardUser?.userName}، هذه بيانات حية من الخادم`
-      : "نظرة عامة على إدارة الحلقات القرآنية";
+  const selectedSemesterName = useMemo(
+    () => semesters.find((semester) => semester.id === selectedSemesterId)?.name,
+    [semesters, selectedSemesterId]
+  );
 
+  const dashboardSubtitle = useMemo(() => {
+    const greeting =
+      dashboardUser?.name || dashboardUser?.fullName || dashboardUser?.userName
+        ? `مرحبًا ${dashboardUser?.name || dashboardUser?.fullName || dashboardUser?.userName}، هذه بيانات حية من الخادم`
+        : "نظرة عامة على إدارة الحلقات القرآنية";
+
+    return selectedSemesterName ? `${greeting} — الفصل: ${selectedSemesterName}` : greeting;
+  }, [dashboardUser, selectedSemesterName]);
+
+  // جلب قائمة الفصول مرة واحدة لتعبئة الفلتر
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSemesters = async () => {
+      try {
+        const response = await axiosClient.get<Semester[] | PagedResponse<Semester>>("/Semesters");
+        const payload = response.data;
+        const list = Array.isArray(payload) ? payload : payload.items ?? payload.data ?? [];
+
+        if (isMounted) {
+          setSemesters(list);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchSemesters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [axiosClient]);
+
+  // جلب بيانات اللوحة، وتُعاد كلما تغيّر الفصل المختار
   useEffect(() => {
     let isMounted = true;
 
@@ -266,85 +369,117 @@ const Index = () => {
       return [];
     };
 
+    const isFilteredBySemester = selectedSemesterId !== ALL_SEMESTERS;
+    const semesterParam = isFilteredBySemester ? { semesterId: selectedSemesterId } : undefined;
+
     const fetchDashboard = async () => {
       try {
-        const [studentsResult, teachersResult, circlesResult, attendanceResult, pointsResult, meResult] =
-          await Promise.allSettled([
-            axiosClient.get<PagedResponse<unknown> | unknown[]>("/students/filtered", {
-              params: {
-                pageNumber: 1,
-                pageSize: 1,
-              },
-            }),
-            axiosClient.get<PagedResponse<unknown> | unknown[]>("/teachers/filtered", {
-              params: {
-                pageNumber: 1,
-                pageSize: 1,
-              },
-            }),
-            axiosClient.get<unknown[]>("/halaqas"),
-            axiosClient.get<AttendanceOverviewReport>("/reports/attendance/overview"),
-            axiosClient.get<PointsOverviewReport>("/reports/points/overview"),
-            axiosClient.get<MeResponse>("/Auth/me"),
-          ]);
+        setIsLoading(true);
+
+        const [attendanceResult, pointsResult, meResult] = await Promise.allSettled([
+          axiosClient.get<AttendanceOverviewReport>("/reports/attendance/overview", {
+            params: semesterParam,
+          }),
+          axiosClient.get<PointsOverviewReport>("/reports/points/overview", {
+            params: semesterParam,
+          }),
+          axiosClient.get<MeResponse>("/Auth/me"),
+        ]);
 
         if (!isMounted) {
           return;
         }
 
-        const studentsData = studentsResult.status === "fulfilled" ? studentsResult.value.data : null;
-        const teachersData = teachersResult.status === "fulfilled" ? teachersResult.value.data : null;
-        const circlesData = circlesResult.status === "fulfilled" ? circlesResult.value.data : null;
-        const attendanceDataResult = attendanceResult.status === "fulfilled" ? attendanceResult.value.data : null;
-        const pointsDataResult = pointsResult.status === "fulfilled" ? pointsResult.value.data : null;
-        const meData = meResult.status === "fulfilled" ? meResult.value.data : null;
-
-        if (studentsData) {
-          const studentsCollection = normalizeCollection(studentsData);
-          const totalStudents =
-            (studentsData as PagedResponse<unknown>).totalCount ??
-            (studentsData as PagedResponse<unknown>).totalItems ??
-            (studentsData as PagedResponse<unknown>).count ??
-            studentsCollection.length;
-
-          setStudentCount(Number(totalStudents) || studentsCollection.length);
+        if (attendanceResult.status === "fulfilled") {
+          setAttendanceOverview(attendanceResult.value.data);
         }
 
-        if (teachersData) {
-          const teachersCollection = normalizeCollection(teachersData);
-          const totalTeachers =
-            (teachersData as PagedResponse<unknown>).totalCount ??
-            (teachersData as PagedResponse<unknown>).totalItems ??
-            (teachersData as PagedResponse<unknown>).count ??
-            teachersCollection.length;
-
-          setTeacherCount(Number(totalTeachers) || teachersCollection.length);
+        if (pointsResult.status === "fulfilled") {
+          setPointsOverview(pointsResult.value.data);
         }
 
-        if (circlesData) {
-          setCircleCount(Array.isArray(circlesData) ? circlesData.length : 0);
+        if (meResult.status === "fulfilled") {
+          setDashboardUser(meResult.value.data);
         }
 
-        if (attendanceDataResult) {
-          setAttendanceOverview(attendanceDataResult);
-        }
-
-        if (pointsDataResult) {
-          setPointsOverview(pointsDataResult);
-        }
-
-        if (meData) {
-          setDashboardUser(meData);
-        }
-
-        if (
-          studentsResult.status === "rejected" ||
-          teachersResult.status === "rejected" ||
-          circlesResult.status === "rejected" ||
+        let hadError =
           attendanceResult.status === "rejected" ||
           pointsResult.status === "rejected" ||
-          meResult.status === "rejected"
-        ) {
+          meResult.status === "rejected";
+
+        if (isFilteredBySemester) {
+          // فصل محدد: نعتمد على ملخص الفصل الجاهز بدل 3 استدعاءات منفصلة
+          try {
+            const semesterRes = await axiosClient.get<SemesterOverviewReport>(
+              `/reports/semesters/${selectedSemesterId}/overview`
+            );
+
+            if (!isMounted) {
+              return;
+            }
+
+            const stats = semesterRes.data.statistics;
+            setStudentCount(Number(stats.totalStudents) || 0);
+            setTeacherCount(Number(stats.totalTeachers) || 0);
+            setCircleCount(Number(stats.totalClasses) || 0);
+          } catch (error) {
+            console.error(error);
+            hadError = true;
+          }
+        } else {
+          // كل الفصول: نفس منطق الجلب الأصلي بالعدّ اليدوي
+          const [studentsResult, teachersResult, circlesResult] = await Promise.allSettled([
+            axiosClient.get<PagedResponse<unknown> | unknown[]>("/students/filtered", {
+              params: { pageNumber: 1, pageSize: 1 },
+            }),
+            axiosClient.get<PagedResponse<unknown> | unknown[]>("/teachers/filtered", {
+              params: { pageNumber: 1, pageSize: 1 },
+            }),
+            axiosClient.get<unknown[]>("/halaqas"),
+          ]);
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (studentsResult.status === "fulfilled") {
+            const data = studentsResult.value.data;
+            const collection = normalizeCollection(data);
+            const total =
+              (data as PagedResponse<unknown>).totalCount ??
+              (data as PagedResponse<unknown>).totalItems ??
+              (data as PagedResponse<unknown>).count ??
+              collection.length;
+
+            setStudentCount(Number(total) || collection.length);
+          }
+
+          if (teachersResult.status === "fulfilled") {
+            const data = teachersResult.value.data;
+            const collection = normalizeCollection(data);
+            const total =
+              (data as PagedResponse<unknown>).totalCount ??
+              (data as PagedResponse<unknown>).totalItems ??
+              (data as PagedResponse<unknown>).count ??
+              collection.length;
+
+            setTeacherCount(Number(total) || collection.length);
+          }
+
+          if (circlesResult.status === "fulfilled") {
+            setCircleCount(Array.isArray(circlesResult.value.data) ? circlesResult.value.data.length : 0);
+          }
+
+          if (
+            studentsResult.status === "rejected" ||
+            teachersResult.status === "rejected" ||
+            circlesResult.status === "rejected"
+          ) {
+            hadError = true;
+          }
+        }
+
+        if (hadError) {
           toast.error("تعذر تحميل بعض بيانات لوحة التحكم من الخادم");
         }
       } catch (error) {
@@ -362,15 +497,38 @@ const Index = () => {
     return () => {
       isMounted = false;
     };
-  }, [axiosClient]);
+  }, [axiosClient, selectedSemesterId]);
 
   return (
     <DashboardLayout
       title="لوحة التحكم"
       subtitle={dashboardSubtitle}
     >
+      {/* فلتر الفصل */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
+          <CalendarDays className="h-4 w-4" />
+          عرض بيانات:
+        </div>
+        <div className="w-full sm:w-64">
+          <Select value={selectedSemesterId} onValueChange={setSelectedSemesterId}>
+            <SelectTrigger className="bg-white">
+              <SelectValue placeholder="اختر الفصل" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_SEMESTERS}>كل الفصول</SelectItem>
+              {semesters.map((semester) => (
+                <SelectItem key={semester.id} value={semester.id}>
+                  {semester.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-10">
         <StatCard
           icon={GraduationCap}
           label="إجمالي الطلاب"
@@ -391,9 +549,16 @@ const Index = () => {
         />
         <StatCard
           icon={ClipboardCheck}
-          label="نسبة الحضور"
+          label="نسبة حضور الطلاب"
           value={isLoading ? "..." : formatPercent(attendanceOverview?.overallSummary.studentAverageAttendance ?? 0)}
           change="من تقارير الحضور"
+        />
+        <StatCard
+          icon={Activity}
+          label="نسبة حضور الأساتذة"
+          value={isLoading ? "..." : formatPercent(attendanceOverview?.overallSummary.teacherAverageAttendance ?? 0)}
+          change="من تقارير الحضور"
+          variant="info"
         />
       </div>
 
@@ -479,6 +644,114 @@ const Index = () => {
           ) : (
             <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
               {isLoading ? "جارٍ تحميل بيانات النقاط..." : "لا توجد بيانات نقاط متاحة"}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* لوحة الصدارة + تنبيهات الغياب */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        {/* أفضل الطلاب */}
+        <Card>
+          <div className="flex items-center gap-2 mb-5">
+            <Trophy className="w-5 h-5 text-yellow-500" />
+            <h3 className="font-bold text-gray-800">لوحة الصدارة — الطلاب</h3>
+          </div>
+
+          {topStudentsLeaderboard.length > 0 ? (
+            <div className="space-y-3">
+              {topStudentsLeaderboard.map((student, i) => (
+                <div key={student.studentId} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i === 0
+                          ? "bg-yellow-100 text-yellow-700"
+                          : i === 1
+                          ? "bg-gray-100 text-gray-600"
+                          : i === 2
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">{student.studentName}</span>
+                  </div>
+                  <span className="text-sm font-bold text-primary">
+                    {formatNumber(student.totalPoints)} نقطة
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
+              {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات نقاط متاحة"}
+            </div>
+          )}
+        </Card>
+
+        {/* أفضل الأساتذة */}
+        <Card>
+          <div className="flex items-center gap-2 mb-5">
+            <Medal className="w-5 h-5 text-green-600" />
+            <h3 className="font-bold text-gray-800">أفضل الأساتذة تفاعلاً</h3>
+          </div>
+
+          {topTeachersLeaderboard.length > 0 ? (
+            <div className="space-y-3">
+              {topTeachersLeaderboard.map((teacher, i) => (
+                <div key={teacher.teacherId} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i === 0
+                          ? "bg-yellow-100 text-yellow-700"
+                          : i === 1
+                          ? "bg-gray-100 text-gray-600"
+                          : i === 2
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">{teacher.teacherName}</span>
+                  </div>
+                  <span className="text-sm font-bold text-green-700">
+                    {formatNumber(teacher.totalPointsGiven)} نقطة
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
+              {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات متاحة"}
+            </div>
+          )}
+        </Card>
+
+        {/* تنبيه: الطلاب الأكثر غياباً */}
+        <Card>
+          <div className="flex items-center gap-2 mb-5">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <h3 className="font-bold text-gray-800">الطلاب الأكثر غياباً</h3>
+          </div>
+
+          {mostAbsentStudents.length > 0 ? (
+            <div className="space-y-3">
+              {mostAbsentStudents.map((student) => (
+                <div key={student.studentId} className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">{student.studentName}</span>
+                  <span className="text-xs font-bold text-destructive bg-destructive/10 px-2 py-1 rounded-full">
+                    {formatNumber(student.absentDays)} يوم غياب
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
+              {isLoading ? "جارٍ التحميل..." : "لا يوجد طلاب لديهم غياب مسجل 👏"}
             </div>
           )}
         </Card>

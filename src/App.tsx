@@ -10,7 +10,8 @@ import CoursesPage from "./pages/CoursesPage";
 import TeachersPage from "./pages/TeachersPage";
 import StudentsPage from "./pages/StudentsPage";
 import CirclesPage from "./pages/CirclesPage";
-import EnrollmentsPage from "./pages/EnrollmentsPage";
+import StudentEnrollmentPage from "./pages/StudentEnrollmentPage";
+import TeacherEnrollmentPage from "./pages/TeacherEnrollmentPage";
 import CircleDetailsPage from "./pages/CircleDetailsPage";
 import DailyAttendancePage from "./pages/DailyAttendancePage";
 import ReportsPage from "./pages/ReportsPage";
@@ -20,9 +21,8 @@ import FormBuilderPage from './pages/FormBuilderPage';
 import FormPreviewPage from './pages/FormPreviewPage';
 import FormFillPage from './pages/FormFillPage';
 import FormResponsesPage from './pages/FormResponsesPage';
-import NotesPage from "./pages/NotesPage";
+import EmailPage from "./pages/EmailPage";
 import NotFound from "./pages/NotFound";
-import AttendanceChooserPage from "./pages/AttendanceChooserPage";
 import AttendanceCheckInPage from "./pages/AttendanceCheckInPage";
 import AttendanceCheckOutPage from "./pages/AttendanceCheckOutPage";
 
@@ -43,11 +43,11 @@ const App = () => (
           <Route path="/students" element={<StudentsPage />} />
           <Route path="/circles" element={<CirclesPage />} />
           <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
-          <Route path="/enrollments" element={<EnrollmentsPage />} />
+          <Route path="/enrollments/student" element={<StudentEnrollmentPage />} />
+          <Route path="/enrollments/teacher" element={<TeacherEnrollmentPage />} />
           <Route path="/attendance/daily" element={<DailyAttendancePage/>}/>
-          <Route path="/attendance" element={<AttendanceChooserPage />} />
-<Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
-<Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
+          <Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
+          <Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/exams" element={<ExamsPage />} />
           <Route path="/form" element={<FormListPage />} />
@@ -56,7 +56,7 @@ const App = () => (
         <Route path="/forms/:id/edit" element={<FormBuilderPage />} />
         <Route path="/forms/:id/preview" element={<FormPreviewPage /> }/>
         <Route path="/forms/:id/responses" element={<FormResponsesPage />} />
-          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/email" element={<EmailPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
