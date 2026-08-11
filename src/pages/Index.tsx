@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Medal,
   CalendarDays,
+  BookMarked,
 } from "lucide-react";
 import {
   BarChart,
@@ -119,6 +120,29 @@ interface SemesterOverviewReport {
     totalPointsGiven: number | string;
     averageAttendancePercentage: number | string;
   };
+  topStudents?: TopStudentDto[];
+}
+
+interface TopStudentDto {
+  studentId: string;
+  studentName: string;
+  totalPoints: number | string;
+  quranPagesMemorized: number | string;
+  hadithsMemorized: number | string;
+  attendancePercentage: number | string;
+}
+
+interface StudentMemorizationProgressDto {
+  studentId: string;
+  totalHadithsMemorized: number | string;
+  totalQuranPagesMemorized: number | string;
+}
+
+interface MemorizationLeaderboardEntry {
+  studentId: string;
+  studentName: string;
+  quranPages: number;
+  hadiths: number;
 }
 
 interface MeResponse {
@@ -145,6 +169,7 @@ const Index = () => {
   const [circleCount, setCircleCount] = useState(0);
   const [attendanceOverview, setAttendanceOverview] = useState<AttendanceOverviewReport | null>(null);
   const [pointsOverview, setPointsOverview] = useState<PointsOverviewReport | null>(null);
+  const [memorizationLeaderboard, setMemorizationLeaderboard] = useState<MemorizationLeaderboardEntry[]>([]);
   const [dashboardUser, setDashboardUser] = useState<MeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -375,6 +400,7 @@ const Index = () => {
     const fetchDashboard = async () => {
       try {
         setIsLoading(true);
+        setMemorizationLeaderboard([]);
 
         const [attendanceResult, pointsResult, meResult] = await Promise.allSettled([
           axiosClient.get<AttendanceOverviewReport>("/reports/attendance/overview", {
@@ -422,6 +448,19 @@ const Index = () => {
             setStudentCount(Number(stats.totalStudents) || 0);
             setTeacherCount(Number(stats.totalTeachers) || 0);
             setCircleCount(Number(stats.totalClasses) || 0);
+
+            // أعلى الطلاب حفظًا — من أوائل الطلاب في ملخص الفصل
+            setMemorizationLeaderboard(
+              (semesterRes.data.topStudents ?? [])
+                .map((student) => ({
+                  studentId: student.studentId,
+                  studentName: student.studentName,
+                  quranPages: Number(student.quranPagesMemorized) || 0,
+                  hadiths: Number(student.hadithsMemorized) || 0,
+                }))
+                .sort((a, b) => b.quranPages + b.hadiths - (a.quranPages + a.hadiths))
+                .slice(0, 5)
+            );
           } catch (error) {
             console.error(error);
             hadError = true;
@@ -476,6 +515,43 @@ const Index = () => {
             circlesResult.status === "rejected"
           ) {
             hadError = true;
+          }
+
+          // أعلى الطلاب حفظًا — ملخص الحفظ لكل طالب من قائمة الأوائل بالنقاط
+          if (pointsResult.status === "fulfilled") {
+            const topByPoints = (pointsResult.value.data.studentPointsDetails ?? [])
+              .slice()
+              .sort((a, b) => Number(b.totalPoints) - Number(a.totalPoints))
+              .slice(0, 5);
+
+            const memorizationResults = await Promise.allSettled(
+              topByPoints.map((student) =>
+                axiosClient.get<StudentMemorizationProgressDto>(
+                  `/students/${student.studentId}/memorization`
+                )
+              )
+            );
+
+            if (!isMounted) {
+              return;
+            }
+
+            setMemorizationLeaderboard(
+              memorizationResults
+                .map((result, index) => {
+                  if (result.status !== "fulfilled") return null;
+
+                  return {
+                    studentId: topByPoints[index].studentId,
+                    studentName: topByPoints[index].studentName,
+                    quranPages: Number(result.value.data.totalQuranPagesMemorized) || 0,
+                    hadiths: Number(result.value.data.totalHadithsMemorized) || 0,
+                  };
+                })
+                .filter(
+                  (entry): entry is MemorizationLeaderboardEntry => entry !== null
+                )
+            );
           }
         }
 
@@ -650,7 +726,7 @@ const Index = () => {
       </div>
 
       {/* لوحة الصدارة + تنبيهات الغياب */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
         {/* أفضل الطلاب */}
         <Card>
           <div className="flex items-center gap-2 mb-5">
@@ -727,6 +803,54 @@ const Index = () => {
           ) : (
             <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
               {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات متاحة"}
+            </div>
+          )}
+        </Card>
+
+        {/* أعلى الطلاب حفظًا */}
+        <Card>
+          <div className="flex items-center gap-2 mb-5">
+            <BookMarked className="w-5 h-5 text-green-600" />
+            <h3 className="font-bold text-gray-800">أعلى الطلاب حفظًا</h3>
+          </div>
+
+          {memorizationLeaderboard.length > 0 ? (
+            <div className="space-y-3">
+              {memorizationLeaderboard.map((student, i) => (
+                <div key={student.studentId} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        i === 0
+                          ? "bg-yellow-100 text-yellow-700"
+                          : i === 1
+                          ? "bg-gray-100 text-gray-600"
+                          : i === 2
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700 truncate">{student.studentName}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {formatNumber(student.quranPages)} صفحة
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-yellow-700">
+                      <BookMarked className="h-3.5 w-3.5" />
+                      {formatNumber(student.hadiths)} حديث
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
+              {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات حفظ متاحة"}
             </div>
           )}
         </Card>

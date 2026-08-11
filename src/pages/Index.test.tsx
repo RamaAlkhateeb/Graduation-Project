@@ -35,8 +35,20 @@ describe("Index", () => {
 
     getMock.mockImplementation((path: string) => {
       switch (path) {
+        case "/Semesters":
+          return Promise.resolve({ data: [{ id: "semester-1", name: "الفصل الأول" }] });
         case "/students/filtered":
           return Promise.resolve({ data: { totalCount: 42, items: [] } });
+        case "/students/s1/memorization":
+          return Promise.resolve({
+            data: {
+              studentId: "s1",
+              hadiths: [],
+              quranPages: [],
+              totalHadithsMemorized: 15,
+              totalQuranPagesMemorized: 30,
+            },
+          });
         case "/teachers/filtered":
           return Promise.resolve({ data: { totalCount: 7, items: [] } });
         case "/halaqas":
@@ -125,15 +137,37 @@ describe("Index", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => {
-      expect(getMock).toHaveBeenCalledTimes(6);
-    });
-
     expect(
       await screen.findByText(/مرحبًا أحمد المسؤول، هذه بيانات حية من الخادم/)
     ).toBeInTheDocument();
     expect(screen.getByText("أفضل حضور: أحمد")).toBeInTheDocument();
     expect(screen.getByText("أعلى طالب نقاطًا: أحمد")).toBeInTheDocument();
     expect(screen.getByText("أكثر المعلمين منحًا للنقاط: خالد")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/reports/attendance/overview", {
+        params: undefined,
+      });
+      expect(getMock).toHaveBeenCalledWith("/reports/points/overview", {
+        params: undefined,
+      });
+      expect(getMock).toHaveBeenCalledWith("/students/s1/memorization");
+    });
+  });
+
+  it("shows the memorization leaderboard with per-student totals", async () => {
+    render(
+      <MemoryRouter initialEntries={["/index"]}>
+        <Index />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("أعلى الطلاب حفظًا")).toBeInTheDocument();
+    expect(await screen.findByText(/ صفحة$/)).toBeInTheDocument();
+    expect(screen.getByText(/ حديث$/)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/students/s1/memorization");
+    });
   });
 });

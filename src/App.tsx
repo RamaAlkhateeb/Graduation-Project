@@ -29,6 +29,8 @@ import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import AttendanceCheckInPage from "./pages/AttendanceCheckInPage";
 import AttendanceCheckOutPage from "./pages/AttendanceCheckOutPage";
+import StatusesPage from "./pages/StatusesPage";
+import StudentMemorizationPage from "./pages/StudentMemorizationPage";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,7 @@ const App = () => (
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/teachers" element={<TeachersPage />} />
             <Route path="/students" element={<StudentsPage />} />
+            <Route path="/students/:studentId/memorization" element={<StudentMemorizationPage />} />
             <Route path="/circles" element={<CirclesPage />} />
             <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
             <Route path="/enrollments/student" element={<StudentEnrollmentPage />} />
@@ -71,6 +74,7 @@ const App = () => (
             <Route path="/forms/:id/preview" element={<FormPreviewPage />} />
             <Route path="/forms/:id/responses" element={<FormResponsesPage />} />
             <Route path="/email" element={<EmailPage />} />
+            <Route path="/statuses" element={<StatusesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -524,6 +525,7 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const StudentsPage = () => {
+    const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [students, setStudents] = useState<StudentDetailDto[]>([]);
@@ -1691,6 +1693,11 @@ const StudentsPage = () => {
                                         key={student.id}
                                         actions={[
                                             {
+                                                label: "سجلات الحفظ",
+                                                icon: <BookOpenCheck className="h-4 w-4" />,
+                                                onSelect: () => navigate(`/students/${student.id}/memorization`),
+                                            },
+                                            {
                                                 label: "عرض التفاصيل",
                                                 icon: <Eye className="h-4 w-4" />,
                                                 onSelect: () => void handleOpenDetails(student),
@@ -1721,6 +1728,18 @@ const StudentsPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-1"
+                                                        onClick={() => navigate(`/students/${student.id}/memorization`)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <BookOpenCheck className="h-3.5 w-3.5" />
+                                                        الحفظ
+                                                    </Button>
+
                                                     <Button
                                                         type="button"
                                                         variant="outline"

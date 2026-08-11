@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookOpenCheck } from "lucide-react";
 import { toast } from "sonner";
 
 interface Halaqa {
@@ -43,6 +45,7 @@ const API_BASE_URL =
 
 const CircleDetailsPage = () => {
   const { circleId } = useParams();
+  const navigate = useNavigate();
 
   const [circle, setCircle] = useState<Halaqa | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -195,9 +198,23 @@ const CircleDetailsPage = () => {
                 <p className="text-sm text-muted-foreground">لا يوجد طلاب مسجلون.</p>
               ) : (
                 students.map((student) => (
-                  <div key={student.id} className="rounded-lg border p-3">
+                  <div key={student.id} className="rounded-lg border p-3 space-y-2">
                     <div className="font-medium">{student.name}</div>
                     <div className="text-xs text-muted-foreground break-all">{student.nationalityNumber ?? student.id}</div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1"
+                      onClick={() =>
+                        navigate(
+                          `/students/${student.id}/memorization?halaqaId=${circleId}&halaqaName=${encodeURIComponent(circle?.className ?? "")}`
+                        )
+                      }
+                    >
+                      <BookOpenCheck className="h-3.5 w-3.5" />
+                      سجلات الحفظ
+                    </Button>
                   </div>
                 ))
               )}
