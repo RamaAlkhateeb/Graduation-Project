@@ -878,7 +878,6 @@ const StudentsPage = () => {
                 "userName",
                 "password",
                 "email",
-                "additionalInformations",
             ],
             [
                 "Student Name",
@@ -894,7 +893,6 @@ const StudentsPage = () => {
                 "student.username",
                 "password",
                 "student@example.com",
-                "",
             ],
         ]);
 
