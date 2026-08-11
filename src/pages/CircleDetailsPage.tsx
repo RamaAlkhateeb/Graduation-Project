@@ -178,8 +178,7 @@ const CircleDetailsPage = () => {
               <span className="font-medium">{courseName}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground">المعرف</span>
-              <span className="font-medium break-all">{circleId ?? "-"}</span>
+              
             </div>
           </CardContent>
         </Card>
@@ -200,7 +199,7 @@ const CircleDetailsPage = () => {
                 students.map((student) => (
                   <div key={student.id} className="rounded-lg border p-3 space-y-2">
                     <div className="font-medium">{student.name}</div>
-                    <div className="text-xs text-muted-foreground break-all">{student.nationalityNumber ?? student.id}</div>
+                    
                     <Button
                       type="button"
                       variant="outline"
@@ -238,7 +237,7 @@ const CircleDetailsPage = () => {
                 teachers.map((teacher) => (
                   <div key={teacher.id} className="rounded-lg border p-3">
                     <div className="font-medium">{teacher.name}</div>
-                    <div className="text-xs text-muted-foreground break-all">{teacher.nationalityNumber ?? teacher.id}</div>
+                    
                   </div>
                 ))
               )}

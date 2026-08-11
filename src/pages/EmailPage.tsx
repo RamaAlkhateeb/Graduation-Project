@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import {
   Send,
   Users,
   UserSquare2,
+  GraduationCap,
   History,
   CheckCircle2,
   ChevronDown,
@@ -31,13 +32,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { uuid } from "@/lib/utils";
-import { teacherApi } from "@/api/personApi";
+import { teacherApi, studentApi } from "@/api/personApi";
 import { emailApi } from "@/api/emailApi";
 import type { EmailAddressDto, EmailAttachmentDto } from "@/types/email";
-import type { TeacherDto } from "@/types/person";
-import { useEffect } from "react";
+import type { TeacherDto, StudentListItemDto } from "@/types/person";
 
-type RecipientCategory = "teacher" | "manual";
+type RecipientCategory = "teacher" | "student" | "manual";
 
 interface ManualRow {
   id: string;
@@ -93,6 +93,12 @@ const EmailPage = () => {
   const [teacherSearch, setTeacherSearch] = useState("");
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<Set<string>>(new Set());
 
+  // ── الطلاب (أولياء الأمور) ──
+  const [students, setStudents] = useState<StudentListItemDto[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+
   // ── مستلمون يدويون ──
   const [manualTo, setManualTo] = useState<ManualRow[]>([emptyManualRow()]);
 
@@ -111,14 +117,17 @@ const EmailPage = () => {
   const [sending, setSending] = useState(false);
   const [history, setHistory] = useState<SentHistoryEntry[]>([]);
 
+  // ── تحميل الأساتذة ──
   useEffect(() => {
     const loadTeachers = async () => {
       try {
         setTeachersLoading(true);
         const list = await teacherApi.list();
-        setTeachers(list.filter((t) => Boolean(t.email)));
-      } catch {
+        setTeachers(Array.isArray(list) ? list.filter((t) => Boolean(t.email)) : []);
+      } catch (err) {
+        console.error("loadTeachers error:", err);
         toast.error("تعذر تحميل قائمة الأساتذة");
+        setTeachers([]);
       } finally {
         setTeachersLoading(false);
       }
@@ -127,8 +136,40 @@ const EmailPage = () => {
     void loadTeachers();
   }, []);
 
-  const filteredTeachers = teachers.filter((t) =>
+  // ── تحميل الطلاب ──
+  // ملاحظة: لا نفلتر هنا حسب وجود بريد، بل نعرض الجميع ونعطّل من ليس لديه
+  // بريد في الواجهة، حتى يتضح للمستخدم الفرق بين "فشل التحميل" و"لا يوجد بريد".
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        setStudentsLoading(true);
+        const list = await studentApi.list();
+        console.log("🔍 studentApi.list() raw result:", list); // 👈 تشخيص مؤقت — احذفه لاحقًا
+        console.log("🔍 is array?", Array.isArray(list), "length:", (list as unknown[])?.length); // 👈 تشخيص مؤقت
+        setStudents(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("❌ loadStudents error:", err); // 👈 تشخيص مؤقت
+        toast.error("تعذر تحميل قائمة الطلاب");
+        setStudents([]);
+      } finally {
+        setStudentsLoading(false);
+      }
+    };
+
+    void loadStudents();
+  }, []);
+
+  const safeTeachers = Array.isArray(teachers) ? teachers : [];
+  const safeStudents = Array.isArray(students) ? students : [];
+
+  const filteredTeachers = safeTeachers.filter((t) =>
     `${t.name} ${t.email ?? ""}`.toLowerCase().includes(teacherSearch.toLowerCase())
+  );
+
+  const filteredStudents = safeStudents.filter((s) =>
+    `${s.name} ${s.fatherName ?? ""} ${s.email ?? ""}`
+      .toLowerCase()
+      .includes(studentSearch.toLowerCase())
   );
 
   const toggleTeacher = (id: string, checked: boolean) => {
@@ -149,6 +190,26 @@ const EmailPage = () => {
   };
 
   const clearTeacherSelection = () => setSelectedTeacherIds(new Set());
+
+  const toggleStudent = (id: string, checked: boolean) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  // نحدد فقط الطلاب الظاهرين حاليًا والذين لديهم بريد إلكتروني فعلي
+  const selectAllVisibleStudents = () => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      filteredStudents.filter((s) => Boolean(s.email)).forEach((s) => next.add(s.id));
+      return next;
+    });
+  };
+
+  const clearStudentSelection = () => setSelectedStudentIds(new Set());
 
   const updateRow = (
     rows: ManualRow[],
@@ -207,7 +268,8 @@ const EmailPage = () => {
         address: row.address.trim(),
       }));
 
-  const selectedTeachers = teachers.filter((t) => selectedTeacherIds.has(t.id));
+  const selectedTeachers = safeTeachers.filter((t) => selectedTeacherIds.has(t.id));
+  const selectedStudents = safeStudents.filter((s) => selectedStudentIds.has(s.id));
 
   const resetComposer = () => {
     setSubject("");
@@ -219,6 +281,7 @@ const EmailPage = () => {
     setBccRows([]);
     setManualTo([emptyManualRow()]);
     setSelectedTeacherIds(new Set());
+    setSelectedStudentIds(new Set());
   };
 
   const handleSend = async () => {
@@ -229,9 +292,16 @@ const EmailPage = () => {
             .map((t) => ({ name: t.name, address: t.email as string }))
         : [];
 
+    const studentAddresses: EmailAddressDto[] =
+      recipientCategory === "student"
+        ? selectedStudents
+            .filter((s) => s.email)
+            .map((s) => ({ name: s.name, address: s.email as string }))
+        : [];
+
     const manualAddresses = recipientCategory === "manual" ? buildAddresses(manualTo) : [];
 
-    const to = [...teacherAddresses, ...manualAddresses];
+    const to = [...teacherAddresses, ...studentAddresses, ...manualAddresses];
 
     if (to.length === 0) {
       toast.error("اختر مستلمًا واحدًا على الأقل");
@@ -357,12 +427,14 @@ const EmailPage = () => {
   const totalRecipientsCount =
     recipientCategory === "teacher"
       ? selectedTeacherIds.size
-      : buildAddresses(manualTo).length;
+      : recipientCategory === "student"
+        ? selectedStudentIds.size
+        : buildAddresses(manualTo).length;
 
   return (
     <DashboardLayout
       title="البريد الإلكتروني"
-      subtitle="إرسال رسائل بريد إلكتروني للأساتذة أو لعناوين مخصصة"
+      subtitle="إرسال رسائل بريد إلكتروني للأساتذة أو الطلاب أو لعناوين مخصصة"
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ══════════ عمود المستلمين ══════════ */}
@@ -389,15 +461,22 @@ const EmailPage = () => {
                       أساتذة (من النظام)
                     </span>
                   </SelectItem>
+                  <SelectItem value="student">
+                    <span className="flex items-center gap-2">
+                      <GraduationCap className="h-3.5 w-3.5" />
+                      طلاب / أولياء أمور (من النظام)
+                    </span>
+                  </SelectItem>
                   <SelectItem value="manual">
                     <span className="flex items-center gap-2">
                       <Mail className="h-3.5 w-3.5" />
-                      بريد يدوي (طلاب / أولياء أمور)
+                      بريد يدوي (عنوان مخصص)
                     </span>
                   </SelectItem>
                 </SelectContent>
               </Select>
 
+              {/* ── أساتذة ── */}
               {recipientCategory === "teacher" && (
                 <div className="space-y-3">
                   <Input
@@ -459,12 +538,82 @@ const EmailPage = () => {
                 </div>
               )}
 
+              {/* ── طلاب / أولياء أمور ── */}
+              {recipientCategory === "student" && (
+                <div className="space-y-3">
+                  <Input
+                    placeholder="بحث عن طالب أو ولي أمر..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                  />
+
+                  {studentsLoading ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      جاري تحميل الطلاب...
+                    </p>
+                  ) : filteredStudents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      لا يوجد طلاب مطابقون للبحث.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <button
+                          type="button"
+                          onClick={selectAllVisibleStudents}
+                          className="hover:text-primary transition-colors"
+                        >
+                          تحديد الكل (لديهم بريد)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearStudentSelection}
+                          className="hover:text-destructive transition-colors"
+                        >
+                          إلغاء التحديد
+                        </button>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto space-y-1 rounded-lg border p-1.5">
+                        {filteredStudents.map((student) => {
+                          const hasEmail = Boolean(student.email);
+                          return (
+                            <label
+                              key={student.id}
+                              className={`flex items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors ${
+                                hasEmail
+                                  ? "hover:bg-muted/50 cursor-pointer"
+                                  : "opacity-50 cursor-not-allowed"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={selectedStudentIds.has(student.id)}
+                                disabled={!hasEmail}
+                                onCheckedChange={(checked) =>
+                                  toggleStudent(student.id, checked === true)
+                                }
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">
+                                  {student.name}
+                                  {student.fatherName ? ` — ولي الأمر: ${student.fatherName}` : ""}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate" dir="ltr">
+                                  {student.email || "لا يوجد بريد إلكتروني مسجل"}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── يدوي ── */}
               {recipientCategory === "manual" && (
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 leading-relaxed">
-                    لا تتوفر عناوين بريد الطلاب في النظام حاليًا، لذا يمكنك كتابة بريد ولي الأمر أو
-                    الطالب يدويًا هنا مؤقتًا.
-                  </div>
                   {renderManualRows("المستلمون", manualTo, setManualTo)}
                 </div>
               )}
@@ -657,3 +806,4 @@ const EmailPage = () => {
 };
 
 export default EmailPage;
+

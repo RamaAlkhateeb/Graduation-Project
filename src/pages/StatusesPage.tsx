@@ -238,79 +238,92 @@ const StatusesPage = () => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="p-4 text-right w-24">الترتيب</th>
-                <th className="p-4 text-right">الاسم</th>
-                <th className="p-4 text-right">اللون</th>
-                <th className="p-4 text-right"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && statuses.length === 0 ? (
-                <tr>
-                  <td className="p-4 text-center text-muted-foreground" colSpan={4}>
-                    جارٍ التحميل...
-                  </td>
-                </tr>
-              ) : statuses.length === 0 ? (
-                <tr>
-                  <td className="p-4 text-center text-muted-foreground" colSpan={4}>
-                    لا توجد حالات بعد. أضف حالة جديدة للبدء.
-                  </td>
-                </tr>
-              ) : (
-                statuses.map((status) => (
-                  <TableRowContextMenu
-                    key={status.id}
-                    actions={[
-                      {
-                        label: "تعديل",
-                        icon: <Pencil className="h-4 w-4" />,
-                        onSelect: () => openEdit(status),
-                      },
-                      {
-                        label: "حذف",
-                        icon: <Trash2 className="h-4 w-4" />,
-                        onSelect: () => setDeleteTarget(status),
-                        destructive: true,
-                      },
-                    ]}
-                  >
-                    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="p-4">{status.sortOrder}</td>
-                      <td className="p-4">
-                        <span className="inline-flex items-center gap-2 font-medium">
-                          <span
-                            className="inline-block h-3 w-3 rounded-full border border-border"
-                            style={{ backgroundColor: status.color ?? DEFAULT_COLOR }}
-                          />
-                          {status.name}
-                        </span>
-                      </td>
-                      <td className="p-4 font-mono text-sm text-muted-foreground" dir="ltr">
-                        {status.color ?? "-"}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => openEdit(status)}>
-                            <Pencil className="h-4 w-4 ml-1" />
-                            تعديل
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setDeleteTarget(status)}
-                          >
-                            <Trash2 className="h-4 w-4 ml-1" />
-                            حذف
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  </TableRowContextMenu>
-                ))
-              )}
-            </tbody>
+  <tr className="border-b border-border bg-muted/50">
+    <th className="p-4 text-right w-24">الترتيب</th>
+    <th className="p-4 text-right">الاسم</th>
+    <th className="p-4 text-right">اللون</th>
+    <th className="p-4 text-right"></th>
+  </tr>
+</thead>
+
+<tbody>
+  {loading && statuses.length === 0 ? (
+    <tr>
+      <td className="p-4 text-center text-muted-foreground" colSpan={4}>
+        جارٍ التحميل...
+      </td>
+    </tr>
+  ) : statuses.length === 0 ? (
+    <tr>
+      <td className="p-4 text-center text-muted-foreground" colSpan={4}>
+        لا توجد حالات بعد. أضف حالة جديدة للبدء.
+      </td>
+    </tr>
+  ) : (
+    statuses.map((status) => (
+      <TableRowContextMenu
+        key={status.id}
+        actions={[
+          {
+            label: "تعديل",
+            icon: <Pencil className="h-4 w-4" />,
+            onSelect: () => openEdit(status),
+          },
+          {
+            label: "حذف",
+            icon: <Trash2 className="h-4 w-4" />,
+            onSelect: () => setDeleteTarget(status),
+            destructive: true,
+          },
+        ]}
+      >
+        <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+          <td className="p-4">{status.sortOrder}</td>
+
+          {/* الاسم فقط */}
+          <td className="p-4">
+            <span className="font-medium">
+              {status.name}
+            </span>
+          </td>
+
+          {/* دائرة اللون فقط */}
+          <td className="p-4">
+            <span
+              className="inline-block h-5 w-5 rounded-full border border-border shadow-sm"
+              style={{
+                backgroundColor: status.color ?? DEFAULT_COLOR,
+              }}
+              title={status.color ?? DEFAULT_COLOR}
+            />
+          </td>
+
+          <td className="p-4">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEdit(status)}
+              >
+                <Pencil className="h-4 w-4 ml-1" />
+                تعديل
+              </Button>
+
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteTarget(status)}
+              >
+                <Trash2 className="h-4 w-4 ml-1" />
+                حذف
+              </Button>
+            </div>
+          </td>
+        </tr>
+      </TableRowContextMenu>
+    ))
+  )}
+</tbody>
           </table>
         </div>
       </div>

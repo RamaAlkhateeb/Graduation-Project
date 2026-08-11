@@ -37,21 +37,38 @@ api.interceptors.response.use(
 
 export const studentApi = {
   list: () =>
-    api.get<unknown>('/students/filtered').then(r => normalizeArrayResponse<StudentListItemDto>(r.data)),
+    api
+      .get('/students/filtered')
+      .then(r => normalizeArrayResponse(r.data)),
+
   get: (id: string) =>
-    api.get<StudentListItemDto>(`/students/${id}`).then(r => r.data),
+    api.get(`/students/${id}`).then(r => r.data),
+
   create: (data: CreateStudentDto) =>
-    api.post<StudentListItemDto>('/students', data).then(r => r.data),
+    api.post('/students', data).then(r => r.data),
+
   update: (id: string, data: UpdateStudentDto) =>
-    api.put<StudentListItemDto>(`/students/${id}`, data).then(r => r.data),
+    api.put(`/students/${id}`, data).then(r => r.data),
+
   delete: (id: string) =>
     api.delete(`/students/${id}`),
-  getEnrollments: (id: string) =>
-    api.get<unknown>(`/students/${id}/enrollments`).then(r => normalizeArrayResponse<StudentEnrollmentDto>(r.data)),
-  enroll: (id: string, classId: string) =>
-    api.post(`/students/${id}/enrollments`, classId, { headers: { 'Content-Type': 'application/json' } }),
-};
 
+  getEnrollments: (id: string) =>
+    api
+      .get(`/students/${id}/enrollments`)
+      .then(r => normalizeArrayResponse(r.data)),
+
+  enroll: (id: string, classId: string) =>
+    api.post(
+      `/students/${id}/enrollments`,
+      classId,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    ),
+};
 export const teacherApi = {
   list: () =>
     api.get<unknown>('/teachers/filtered').then(r => normalizeArrayResponse<TeacherDto>(r.data)),
