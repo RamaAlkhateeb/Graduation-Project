@@ -134,7 +134,7 @@ describe("StudentsPage", () => {
 
     getMock.mockImplementation((path: string) => {
       switch (path) {
-        case "/students":
+        case "/students/filtered":
           return Promise.resolve({ data: { items: [student], totalCount: 1, totalPages: 1 } });
         case "/academic-stages":
           return Promise.resolve({ data: [academicStage] });
@@ -159,7 +159,7 @@ describe("StudentsPage", () => {
     expect(await screen.findByText("أحمد")).toBeInTheDocument();
     expect(screen.getByText("الصف الأول")).toBeInTheDocument();
     expect(getMock).toHaveBeenCalledWith("/academic-stages");
-    expect(getMock).toHaveBeenCalledWith("/students", {
+    expect(getMock).toHaveBeenCalledWith("/students/filtered", {
       params: expect.objectContaining({ include: "academicStage" }),
     });
   });

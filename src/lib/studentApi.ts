@@ -1,5 +1,4 @@
 import type { AxiosInstance } from "axios";
-import axios from "axios";
 
 export interface AcademicStageDto {
   id: string;
@@ -90,10 +89,6 @@ export interface StudentListResponse {
 const withIncludes = (includes?: string[]) =>
   includes?.length ? { include: includes.join(",") } : undefined;
 
-const shouldFallbackToFilteredStudents = (error: unknown) =>
-  axios.isAxiosError(error) &&
-  (error.response?.status === 404 || error.response?.status === 405);
-
 export const getAcademicStages = async (client: AxiosInstance) => {
   const response = await client.get<AcademicStageDto[]>("/academic-stages");
   return response.data;
@@ -108,22 +103,11 @@ export const getStudents = async (
   client: AxiosInstance,
   params?: StudentListParams
 ) => {
-  try {
-    const response = await client.get<StudentDetailDto[] | StudentListResponse>("/students", {
-      params,
-    });
-    return response.data;
-  } catch (error) {
-    if (!shouldFallbackToFilteredStudents(error)) {
-      throw error;
-    }
-
-    const response = await client.get<StudentDetailDto[] | StudentListResponse>(
-      "/students/filtered",
-      { params }
-    );
-    return response.data;
-  }
+  const response = await client.get<StudentDetailDto[] | StudentListResponse>(
+    "/students/filtered",
+    { params }
+  );
+  return response.data;
 };
 
 export const getStudentById = async (

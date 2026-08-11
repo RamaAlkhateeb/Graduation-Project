@@ -48,7 +48,7 @@ describe("studentApi", () => {
 
     await getStudents(client, { pageNumber: 1, pageSize: 10, include: "academicStage" });
 
-    expect(client.get).toHaveBeenCalledWith("/students", {
+    expect(client.get).toHaveBeenCalledWith("/students/filtered", {
       params: { pageNumber: 1, pageSize: 10, include: "academicStage" },
     });
   });
