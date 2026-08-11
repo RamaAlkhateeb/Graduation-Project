@@ -76,9 +76,11 @@ describe("studentApi", () => {
       parentWhatsAppPhoneNumber: "0999999999",
       dateOfBirth: "2014-01-01",
       landlineNumber: null,
+      additionalInformations: null,
       userName: "ahmad",
       password: "secret",
       academicStageId: "stage-1",
+      email: "ahmad@example.com",
     };
     client.post.mockResolvedValue({ data: { id: "student-1", ...payload } });
 
@@ -100,6 +102,7 @@ describe("studentApi", () => {
       dateOfBirth: "2014-01-01",
       landlineNumber: null,
       academicStageId: "stage-1",
+      email: "ahmad@example.com",
     };
     client.put.mockResolvedValue({ data: { id: "student-1", ...payload } });
 

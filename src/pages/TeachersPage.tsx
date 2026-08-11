@@ -293,7 +293,7 @@ const TeachersPage = () => {
     // ─── CRUD handlers ───────────────────────────────────
 
     const handleAdd = async () => {
-        if (!newTeacher.name || !newTeacher.fatherName || !newTeacher.motherName || !newTeacher.nationalityNumber) {
+        if (!newTeacher.name || !newTeacher.fatherName || !newTeacher.motherName || !newTeacher.nationalityNumber || !newTeacher.email) {
             toast.error("يرجى تعبئة الحقول المطلوبة");
             return;
         }

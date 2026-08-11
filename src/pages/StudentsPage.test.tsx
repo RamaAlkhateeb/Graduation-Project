@@ -107,9 +107,12 @@ const student = {
   parentWhatsAppPhoneNumber: "0999999998",
   dateOfBirth: "2014-01-01",
   landlineNumber: null,
+  additionalInformations: null,
   academicStageId: "stage-1",
   academicStage,
   memorizedQuranParts: [memorizedParts[0]],
+  userName: "ahmad",
+  email: "ahmad@example.com",
 };
 
 const renderStudentsPage = () =>
@@ -176,6 +179,7 @@ describe("StudentsPage", () => {
     fireEvent.change(within(dialog).getByLabelText(/^واتساب ولي الأمر/), { target: { value: "0988888888" } });
     fireEvent.change(within(dialog).getByLabelText(/^تاريخ الميلاد/), { target: { value: "2015-02-02" } });
     fireEvent.change(within(dialog).getByLabelText(/^الهاتف الأرضي/), { target: { value: "0112222222" } });
+    fireEvent.change(within(dialog).getByLabelText(/^البريد الإلكتروني/), { target: { value: "sara@example.com" } });
     fireEvent.change(within(dialog).getByLabelText(/^اسم المستخدم/), { target: { value: "sara" } });
     fireEvent.change(within(dialog).getByLabelText(/^كلمة المرور/), { target: { value: "secret" } });
     fireEvent.change(within(dialog).getAllByRole("combobox").at(-1)!, {
@@ -194,9 +198,11 @@ describe("StudentsPage", () => {
         parentWhatsAppPhoneNumber: "0988888888",
         dateOfBirth: "2015-02-02T00:00:00.000Z",
         landlineNumber: "0112222222",
+        additionalInformations: null,
         userName: "sara",
         password: "secret",
         academicStageId: "stage-1",
+        email: "sara@example.com",
       });
     });
   });
@@ -220,6 +226,7 @@ describe("StudentsPage", () => {
         "academicStage",
         "userName",
         "password",
+        "email",
       ],
       [
         "سارة",
@@ -234,6 +241,7 @@ describe("StudentsPage", () => {
         "الصف الأول",
         "sara",
         "secret",
+        "sara@example.com",
       ],
     ]);
     const workbook = XLSX.utils.book_new();
@@ -261,9 +269,11 @@ describe("StudentsPage", () => {
         parentWhatsAppPhoneNumber: "0988888888",
         dateOfBirth: "2015-02-02T00:00:00.000Z",
         landlineNumber: null,
+        additionalInformations: null,
         userName: "sara",
         password: "secret",
         academicStageId: "stage-1",
+        email: "sara@example.com",
       });
     });
   });
@@ -287,6 +297,7 @@ describe("StudentsPage", () => {
         "academicStage",
         "userName",
         "password",
+        "email",
       ],
       [
         "",
@@ -301,6 +312,7 @@ describe("StudentsPage", () => {
         "الصف الأول",
         "sara",
         "secret",
+        "sara@example.com",
       ],
     ]);
     const workbook = XLSX.utils.book_new();
@@ -330,9 +342,9 @@ describe("StudentsPage", () => {
     expect(postMock).not.toHaveBeenCalled();
     expect(reportWorksheet.A2.s).toBeDefined();
     expect(reportWorksheet.H2.s).toBeDefined();
-    expect(reportWorksheet.M1.v).toBe("أخطاء الاستيراد");
-    expect(reportWorksheet.M2.v).toContain("الاسم مطلوب");
-    expect(reportWorksheet.M2.v).toContain("تاريخ الميلاد غير صالح");
+    expect(reportWorksheet.N1.v).toBe("أخطاء الاستيراد");
+    expect(reportWorksheet.N2.v).toContain("الاسم مطلوب");
+    expect(reportWorksheet.N2.v).toContain("تاريخ الميلاد غير صالح");
   });
 
   it("updates basic student info without memorized parts or credentials", async () => {

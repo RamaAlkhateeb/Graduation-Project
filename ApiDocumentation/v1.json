@@ -10,6 +10,737 @@
     }
   ],
   "paths": {
+    "/api/attendance-management/halaqas/{halaqaId}/start": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Start Halaqa Session",
+        "description": "Creates attendance records with current UTC time for the specified students in a halaqa. Skips students who already have an open attendance record or were already marked present today.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartHalaqaSessionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartHalaqaSessionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartHalaqaSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/{halaqaId}/finalize": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Finalize Halaqa Session",
+        "description": "Sets EndDate to current UTC time for all open attendance records in the specified halaqa.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/{studentId}/halaqas/{halaqaId}/attend": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Manual Student Attend",
+        "description": "Manually marks a student as present in a halaqa by providing student ID and halaqa ID directly. The system resolves the enrollment and creates an attendance record with current UTC time.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/{studentId}/halaqas/{halaqaId}/leave": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Manual Student Leave",
+        "description": "Manually marks a student as leaving a halaqa by providing student ID and halaqa ID directly. The system resolves the enrollment and closes the open attendance record with current UTC time.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/enrollment/{enrollmentId}/attend": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Student Attend by Enrollment",
+        "description": "Marks a student as present using their enrollment ID. Creates an attendance record with current UTC time. Rejects duplicate same-day attendance.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/enrollment/{enrollmentId}/leave": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Student Leave by Enrollment",
+        "description": "Marks a student as leaving using their enrollment ID. Closes the open attendance record with current UTC time.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/confirm": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Confirm Student Attendance",
+        "description": "Records a student attendance with explicit start and end dates (back-dated or fixed-session). Uses enrollment ID from the request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAttendanceDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAttendanceDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAttendanceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/teachers/enrollment/{enrollmentId}/attend": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Teacher Attend by Enrollment",
+        "description": "Marks a teacher as present using their enrollment ID. Creates an attendance record with current UTC time.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/teachers/enrollment/{enrollmentId}/leave": {
+      "post": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Teacher Leave by Enrollment",
+        "description": "Marks a teacher as leaving using their enrollment ID. Closes the open attendance record with current UTC time.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/{halaqaId}/students": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Halaqa Students",
+        "description": "Retrieves all students enrolled in the specified halaqa with their enrollment details.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/{halaqaId}/current-attendance": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Halaqa Current Attendance",
+        "description": "Retrieves all students in the halaqa with their current attendance status (Online/Offline/Absent).",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/students/{studentId}/attendance-status": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Student Halaqa Attendance Status",
+        "description": "Retrieves all halaqas the student is enrolled in with their current attendance status (Online/Offline/Absent) based on the latest attendance record. Includes EndTime when Offline.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/active-halaqas/student/{studentId}": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Active Halaqas for Student",
+        "description": "Returns all active halaqas (where Semester, Course, and Halaqa are all active) that the student is enrolled in.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/active-halaqas/teacher/{teacherId}": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Active Halaqas for Teacher",
+        "description": "Returns all active halaqas (where Semester, Course, and Halaqa are all active) that the teacher is assigned to.",
+        "parameters": [
+          {
+            "name": "teacherId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/status": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Halaqas by Status",
+        "description": "Returns all halaqas filtered by their IsActive status.",
+        "parameters": [
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/courses/status": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Courses by Status",
+        "description": "Returns all courses filtered by their IsActive status.",
+        "parameters": [
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/semesters/status": {
+      "get": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Get Semesters by Status",
+        "description": "Returns all semesters filtered by their IsActive status.",
+        "parameters": [
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/semesters/{semesterId}/activate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Activate Semester",
+        "description": "Activates the specified semester. Does not cascade to courses or halaqas.",
+        "parameters": [
+          {
+            "name": "semesterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/semesters/{semesterId}/deactivate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Deactivate Semester",
+        "description": "Deactivates the specified semester and cascade-deactivates all its courses and their halaqas.",
+        "parameters": [
+          {
+            "name": "semesterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/courses/{courseId}/activate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Activate Course",
+        "description": "Activates the specified course. Does not cascade to halaqas.",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/courses/{courseId}/deactivate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Deactivate Course",
+        "description": "Deactivates the specified course and cascade-deactivates all its halaqas.",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/{halaqaId}/activate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Activate Halaqa",
+        "description": "Activates the specified halaqa.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/attendance-management/halaqas/{halaqaId}/deactivate": {
+      "put": {
+        "tags": [
+          "AttendanceManagement"
+        ],
+        "summary": "Deactivate Halaqa",
+        "description": "Deactivates the specified halaqa only.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
     "/api/Auth/login": {
       "post": {
         "tags": [
@@ -60,7 +791,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -114,7 +847,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -131,7 +866,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -174,7 +911,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -226,7 +965,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -288,7 +1029,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -333,7 +1076,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -396,7 +1141,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -422,7 +1169,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -465,7 +1214,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -517,7 +1268,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -579,7 +1332,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -624,7 +1379,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -687,7 +1444,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -713,7 +1472,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -756,7 +1517,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -808,7 +1571,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -870,7 +1635,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -915,7 +1682,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -978,7 +1747,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -1004,7 +1775,53 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/Semesters/filtered": {
+      "get": {
+        "tags": [
+          "Semesters"
+        ],
+        "summary": "Get Semesters (Filtered)",
+        "description": "Retrieves semesters filtered by name search or date range.",
+        "parameters": [
+          {
+            "name": "searchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -1047,7 +1864,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -1099,7 +1918,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1161,7 +1982,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1206,7 +2029,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -1269,7 +2094,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -1295,7 +2122,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1338,7 +2167,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -1390,7 +2221,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1452,7 +2285,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1497,7 +2332,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -1560,7 +2397,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -1586,7 +2425,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1629,7 +2470,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -1681,7 +2524,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1743,7 +2588,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1788,7 +2635,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -1851,7 +2700,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -1877,7 +2728,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -1920,7 +2773,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -1972,7 +2827,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2034,7 +2891,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2079,7 +2938,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -2142,7 +3003,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -2168,7 +3031,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2211,7 +3076,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -2263,7 +3130,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2325,7 +3194,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2370,7 +3241,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -2433,7 +3306,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -2459,7 +3334,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2502,7 +3379,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -2554,7 +3433,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2616,7 +3497,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2661,7 +3544,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -2724,7 +3609,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -2750,7 +3637,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2793,7 +3682,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -2845,7 +3736,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2907,7 +3800,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -2952,7 +3847,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -3015,7 +3912,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -3041,7 +3940,740 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/Email/send": {
+      "post": {
+        "tags": [
+          "Email"
+        ],
+        "summary": "Send Email",
+        "description": "Sends a raw email message to one or more recipients. At least one recipient with a valid address and either an HTML or plain-text body are required. Attachments are provided as base64-encoded content. Empty cc/bcc/attachment entries are ignored.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/Email/send-template": {
+      "post": {
+        "tags": [
+          "Email"
+        ],
+        "summary": "Send Template Email",
+        "description": "Renders a named email template (e.g. WelcomeEmail, NotificationEmail, StudentDailyAttendanceReport) with the provided model and sends the result to the specified recipients. Empty cc/bcc/attachment entries are ignored.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTemplateEmailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTemplateEmailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTemplateEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/halaqas/{halaqaId}/students/{studentId}/quran-pages": {
+      "post": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Add Memorized Quran Page",
+        "description": "Records a memorized Quran page for a student in a halaqa. The command validates the page number (1-604), resolves course and semester from the halaqa, and optionally resolves teacher from the authenticated user.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddQuranPageByHalaqaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddQuranPageByHalaqaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddQuranPageByHalaqaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/students/{studentId}/quran-pages": {
+      "get": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Get Student Memorized Quran Pages",
+        "description": "Retrieves all memorized Quran pages for a student, optionally filtered by SemesterId, CourseId, or HalaqaId.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "halaqaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/halaqas/{halaqaId}/students/{studentId}/hadiths": {
+      "post": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Add Memorized Hadith",
+        "description": "Records a memorized hadith for a student in a halaqa. Resolves course and semester from the halaqa, validates the hadith exists, and optionally resolves teacher from the authenticated user.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddHadithByHalaqaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddHadithByHalaqaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddHadithByHalaqaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/students/{studentId}/hadiths": {
+      "get": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Get Student Memorized Hadiths",
+        "description": "Retrieves all memorized hadiths for a student, optionally filtered by SemesterId, CourseId, or HalaqaId. Includes hadith text, book, and chapter information.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "halaqaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/records/{recordId}": {
+      "get": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Get Memorization Record By ID",
+        "description": "Retrieves a single memorization record (Quran page or Hadith) by its ID. Uses the recordType query parameter ('quran-page' or 'hadith') to return the appropriate DTO with full details.",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recordType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Delete Memorization Record",
+        "description": "Deletes a memorization record (Quran page or Hadith). Accepts a recordType query parameter ('quran-page' or 'hadith') to identify which entity to delete.",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recordType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/memorize-managment/records/{recordId}/status": {
+      "patch": {
+        "tags": [
+          "MemorizeManagment"
+        ],
+        "summary": "Update Memorization Status",
+        "description": "Updates the status and optional notes for a memorization record. Accepts a recordType query parameter ('quran-page' or 'hadith') to identify which entity to update.",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recordType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizationStatusDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizationStatusDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemorizationStatusDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/Pdf/from-html": {
+      "post": {
+        "tags": [
+          "Pdf"
+        ],
+        "summary": "Convert HTML to PDF (QuestPDF)",
+        "description": "Converts an HTML string to a downloadable PDF document using QuestPDF (pure .NET). Supports Arabic/RTL text, basic HTML elements, and table layouts.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+
+              }
+            }
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/Pdf/from-html-itext7": {
+      "post": {
+        "tags": [
+          "Pdf"
+        ],
+        "summary": "Convert HTML to PDF (iText 7)",
+        "description": "Converts an HTML string to a downloadable PDF document using iText 7 pdfHTML. Provides native HTML/CSS rendering with broader CSS support, @page rules, and font embedding. Supports Arabic/RTL text.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/HtmlToPdfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+
+              }
+            }
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/points-managment/halaqas/{halaqaId}/students/{studentId}/assessments": {
+      "post": {
+        "tags": [
+          "PointsManagment"
+        ],
+        "summary": "Add Student Assessment",
+        "description": "Adds a point-based assessment for a student in a halaqa. The command resolves course and semester from the halaqa and accepts positive or negative point values.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStudentAssessmentByHalaqaDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStudentAssessmentByHalaqaDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStudentAssessmentByHalaqaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/points-managment/records": {
+      "get": {
+        "tags": [
+          "PointsManagment"
+        ],
+        "summary": "Get Point Records",
+        "description": "Retrieves point records scoped to the current user: teachers see points they awarded, students see points awarded to them, managers see all. Filter by halaqa, course, or semester.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/points-managment/students/{studentId}/points": {
+      "get": {
+        "tags": [
+          "PointsManagment"
+        ],
+        "summary": "Get Student Point Records",
+        "description": "Retrieves point records awarded to a student, filtered by halaqa, course, or semester. StudentId plus at least one of halaqaId, courseId, or semesterId must be provided.",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "halaqaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointRecordDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -3085,7 +4717,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3121,7 +4755,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3164,7 +4800,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "get": {
@@ -3190,7 +4828,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3274,7 +4914,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3302,7 +4944,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -3348,7 +4992,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -3374,7 +5020,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3411,7 +5059,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3459,7 +5109,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3507,7 +5159,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "get": {
@@ -3533,7 +5187,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3550,7 +5206,37 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/my-students": {
+      "get": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Get My Students",
+        "description": "Retrieves all students enrolled in any of the currently authenticated teacher's halaqas. Supports optional name search via the 'nameSearch' query parameter.",
+        "parameters": [
+          {
+            "name": "nameSearch",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -3578,7 +5264,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3615,7 +5303,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3672,7 +5362,177 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/{teacherId}/halaqas/{halaqaId}/students/{studentId}/enrollment": {
+      "get": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Get Student Enrollment in Halaqa",
+        "description": "Retrieves the enrollment record linking a student to a halaqa, returning the enrollment ID needed for attend/leave operations.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teacherId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/enrollment/{enrollmentId}/attend": {
+      "post": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Mark Teacher Attend",
+        "description": "Marks a teacher as present/attended by recording the current time as the attendance start.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/enrollment/{enrollmentId}/leave": {
+      "post": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Mark Teacher Leave",
+        "description": "Marks a teacher as leaving by updating the latest attendance record's end time to now.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/attendance/attend/{enrollmentId}": {
+      "post": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Mark Student Attend",
+        "description": "Marks a student as present/attended in a halaqa by recording the current time as the attendance start.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/teachers/attendance/leave/{enrollmentId}": {
+      "post": {
+        "tags": [
+          "TeacherHalaqa"
+        ],
+        "summary": "Mark Student Leave",
+        "description": "Marks a student as leaving a halaqa by updating the latest attendance record's end time to now.",
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -3729,7 +5589,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "get": {
@@ -3780,7 +5642,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3815,7 +5679,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3843,7 +5709,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -3889,7 +5757,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3917,7 +5787,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -3963,7 +5835,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -3991,7 +5865,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4001,7 +5877,7 @@
           "StudentAcademic"
         ],
         "summary": "Get Student Attendance Records",
-        "description": "Retrieves attendance records for the specified student. Supports optional date range filtering using fromDate and toDate query parameters.",
+        "description": "Retrieves attendance records for the specified student. Supports optional date range filtering using fromDate and toDate query parameters, and optional classId to filter by a specific halaqa.",
         "parameters": [
           {
             "name": "id",
@@ -4027,6 +5903,14 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "classId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -4035,7 +5919,147 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/students/{id}/halaqas": {
+      "get": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Get Student Halaqas",
+        "description": "Retrieves the halaqas the student is enrolled in, with course and semester details. Optionally filters by courseId or semesterId and supports pagination via pageNumber/pageSize (defaults to page 1, page size 10).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/students/{id}/courses": {
+      "get": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Get Student Courses",
+        "description": "Retrieves all courses the student is enrolled in (derived from their halaqa enrollments), each with its halaqas. Optionally filters by semesterId.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "semesterId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/students/{id}/semesters": {
+      "get": {
+        "tags": [
+          "StudentAcademic"
+        ],
+        "summary": "Get Student Semesters",
+        "description": "Retrieves all semesters in which the student is enrolled, each with its courses and their halaqas.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -4071,7 +6095,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4114,7 +6140,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "get": {
@@ -4140,7 +6168,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4168,7 +6198,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4260,7 +6292,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4288,7 +6322,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -4334,7 +6370,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -4360,7 +6398,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4397,7 +6437,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4445,7 +6487,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4482,7 +6526,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4510,7 +6556,39 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/StudentEnrollment/by-halaqa/{halaqaId}": {
+      "get": {
+        "tags": [
+          "StudentEnrollment"
+        ],
+        "summary": "Get Students by Halaqa",
+        "description": "Retrieves all students enrolled in a specific halaqa with their basic information and enrollment IDs.",
+        "parameters": [
+          {
+            "name": "halaqaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -4562,7 +6640,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4640,7 +6720,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4718,7 +6800,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4770,7 +6854,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4814,7 +6900,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4858,7 +6946,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4918,7 +7008,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -4971,7 +7063,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5024,7 +7118,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5093,7 +7189,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5147,7 +7245,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5208,7 +7308,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5261,7 +7363,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5314,7 +7418,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5374,7 +7480,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5434,7 +7542,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5520,7 +7630,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5606,7 +7718,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5649,7 +7763,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5706,7 +7822,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5763,7 +7881,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5807,7 +7927,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5851,7 +7973,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5911,7 +8035,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -5956,7 +8082,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6001,7 +8129,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6068,7 +8198,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6135,7 +8267,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6189,7 +8323,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6242,7 +8378,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6295,7 +8433,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6364,7 +8504,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6418,7 +8560,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6478,7 +8622,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6522,7 +8668,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6575,7 +8723,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6628,7 +8778,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6697,7 +8849,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6751,7 +8905,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6846,7 +9002,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6925,7 +9083,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -6968,7 +9128,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "get": {
@@ -6994,7 +9156,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7011,7 +9175,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -7046,7 +9212,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7074,7 +9242,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -7120,7 +9290,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -7146,7 +9318,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7194,7 +9368,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7237,7 +9413,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -7289,7 +9467,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7351,7 +9531,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7396,7 +9578,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -7459,7 +9643,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -7485,7 +9671,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7530,7 +9718,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7573,7 +9763,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -7625,7 +9817,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7670,7 +9864,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -7733,7 +9929,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -7759,7 +9957,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7813,7 +10013,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -7858,7 +10060,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -7921,7 +10125,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -7947,7 +10153,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8001,7 +10209,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8055,7 +10265,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8100,7 +10312,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -8126,7 +10340,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8180,7 +10396,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8234,7 +10452,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8251,7 +10471,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -8286,7 +10508,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8314,7 +10538,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -8360,7 +10586,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -8386,7 +10614,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8403,7 +10633,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -8438,7 +10670,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8466,7 +10700,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8494,7 +10730,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -8540,7 +10778,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -8566,7 +10806,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8583,7 +10825,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -8618,7 +10862,53 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
+        ]
+      }
+    },
+    "/api/halaqas/filtered": {
+      "get": {
+        "tags": [
+          "Halaqas"
+        ],
+        "summary": "Get Halaqas (Filtered)",
+        "description": "Retrieves halaqas filtered by course, teacher, or name search.",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teacherId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "searchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+
+          }
         ]
       }
     },
@@ -8646,7 +10936,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8674,7 +10966,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -8720,7 +11014,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -8746,7 +11042,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8763,7 +11061,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "post": {
@@ -8798,7 +11098,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     },
@@ -8826,7 +11128,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "put": {
@@ -8872,7 +11176,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       },
       "delete": {
@@ -8898,7 +11204,9 @@
           }
         },
         "security": [
-          {}
+          {
+
+          }
         ]
       }
     }
@@ -8908,6 +11216,103 @@
       "AcademicStageGrade": {
         "type": "integer"
       },
+      "AddHadithByHalaqaDto": {
+        "required": [
+          "hadithId"
+        ],
+        "type": "object",
+        "properties": {
+          "hadithId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teacherId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AddQuranPageByHalaqaDto": {
+        "required": [
+          "pageNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "teacherId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AddStudentAssessmentByHalaqaDto": {
+        "required": [
+          "pointValue",
+          "title",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "pointValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "AddStudentAssessmentDto": {
         "required": [
           "studentId",
@@ -8916,7 +11321,8 @@
           "semesterId",
           "pointValue",
           "categoryId",
-          "notes"
+          "notes",
+          "title"
         ],
         "type": "object",
         "properties": {
@@ -8956,6 +11362,9 @@
               "null",
               "string"
             ]
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -9837,7 +12246,8 @@
         "required": [
           "name",
           "userName",
-          "password"
+          "password",
+          "email"
         ],
         "type": "object",
         "properties": {
@@ -9848,6 +12258,9 @@
             "type": "string"
           },
           "password": {
+            "type": "string"
+          },
+          "email": {
             "type": "string"
           }
         }
@@ -9880,9 +12293,7 @@
           "courseId",
           "classId",
           "smesterId",
-          "pointValue",
-          "categoryId",
-          "givenByTeacherId"
+          "pointValue"
         ],
         "type": "object",
         "properties": {
@@ -9909,6 +12320,18 @@
               "string"
             ],
             "format": "int32"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "categoryId": {
             "type": [
@@ -9975,7 +12398,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classStudentId": {
@@ -9995,9 +12421,11 @@
           "parentWhatsAppPhoneNumber",
           "dateOfBirth",
           "landlineNumber",
+          "additionalInformations",
           "userName",
           "academicStageId",
-          "password"
+          "password",
+          "email"
         ],
         "type": "object",
         "properties": {
@@ -10032,6 +12460,12 @@
               "string"
             ]
           },
+          "additionalInformations": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "userName": {
             "type": "string"
           },
@@ -10040,6 +12474,9 @@
             "format": "uuid"
           },
           "password": {
+            "type": "string"
+          },
+          "email": {
             "type": "string"
           }
         }
@@ -10057,7 +12494,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classTeacherId": {
@@ -10111,10 +12551,7 @@
             "type": "string"
           },
           "email": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string"
           },
           "contactInfos": {
             "type": [
@@ -10124,6 +12561,46 @@
             "items": {
               "$ref": "#/components/schemas/CreateTeacherContactInfoDto"
             }
+          }
+        }
+      },
+      "EmailAddressDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EmailAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentType": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -10645,6 +13122,23 @@
             "format": "uuid"
           },
           "teacherName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "HtmlToPdfRequest": {
+        "required": [
+          "html"
+        ],
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string"
+          },
+          "fileName": {
             "type": [
               "null",
               "string"
@@ -11835,6 +14329,8 @@
           "classId",
           "smesterId",
           "pointValue",
+          "title",
+          "notes",
           "categoryId",
           "givenByTeacherId"
         ],
@@ -11868,6 +14364,18 @@
             ],
             "format": "int32"
           },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "categoryId": {
             "type": [
               "null",
@@ -11881,6 +14389,45 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "PointRecordDto": {
+        "required": [
+          "id",
+          "value",
+          "sign",
+          "teacherName",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sign": {
+            "type": "string"
+          },
+          "teacherName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12132,6 +14679,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -12256,6 +14807,145 @@
           }
         }
       },
+      "SendEmailRequest": {
+        "required": [
+          "to",
+          "subject"
+        ],
+        "type": "object",
+        "properties": {
+          "to": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "cc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "bcc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "subject": {
+            "type": "string"
+          },
+          "htmlBody": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plainTextBody": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAttachmentDto"
+            }
+          }
+        }
+      },
+      "SendTemplateEmailRequest": {
+        "required": [
+          "templateName",
+          "model",
+          "to",
+          "subject"
+        ],
+        "type": "object",
+        "properties": {
+          "templateName": {
+            "type": "string"
+          },
+          "model": {
+
+          },
+          "to": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "cc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "bcc": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddressDto"
+            }
+          },
+          "subject": {
+            "type": "string"
+          },
+          "htmlBody": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plainTextBody": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAttachmentDto"
+            }
+          }
+        }
+      },
+      "StartHalaqaSessionRequest": {
+        "required": [
+          "studentIds"
+        ],
+        "type": "object",
+        "properties": {
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "StudentAttendanceDetailDto": {
         "required": [
           "studentId",
@@ -12325,7 +15015,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classStudentId": {
@@ -12505,10 +15198,11 @@
           "id",
           "name",
           "fatherName",
-          "motherName",
-          "nationalityNumber",
-          "email",
+          "lastName",
+          "fatherWork",
+          "parentPhoneNumber",
           "userName",
+          "email",
           "roleType"
         ],
         "type": "object",
@@ -12523,22 +15217,28 @@
           "fatherName": {
             "type": "string"
           },
-          "motherName": {
+          "lastName": {
             "type": "string"
           },
-          "nationalityNumber": {
+          "fatherWork": {
             "type": [
               "null",
               "string"
             ]
           },
-          "email": {
+          "parentPhoneNumber": {
             "type": [
               "null",
               "string"
             ]
           },
           "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
             "type": [
               "null",
               "string"
@@ -13183,7 +15883,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classTeacherId": {
@@ -14012,6 +16715,30 @@
               "null",
               "string"
             ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpdateMemorizationStatusDto": {
+        "required": [
+          "status",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -14050,9 +16777,7 @@
       },
       "UpdatePointDto": {
         "required": [
-          "pointValue",
-          "categoryId",
-          "givenByTeacherId"
+          "pointValue"
         ],
         "type": "object",
         "properties": {
@@ -14063,6 +16788,18 @@
               "string"
             ],
             "format": "int32"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "categoryId": {
             "type": [
@@ -14141,7 +16878,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classStudentId": {
@@ -14172,23 +16912,61 @@
               "string"
             ]
           },
-          "motherName": {
+          "lastName": {
             "type": [
               "null",
               "string"
             ]
           },
-          "nationalityNumber": {
+          "fatherWork": {
             "type": [
               "null",
               "string"
             ]
           },
-          "email": {
+          "parentPhoneNumber": {
             "type": [
               "null",
               "string"
             ]
+          },
+          "schoolName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parentWhatsAppPhoneNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dateOfBirth": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "landlineNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additionalInformations": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "academicStageId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           },
           "userName": {
             "type": [
@@ -14197,6 +16975,12 @@
             ]
           },
           "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
             "type": [
               "null",
               "string"
@@ -14232,7 +17016,10 @@
             "format": "date-time"
           },
           "endDate": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           },
           "classTeacherId": {
@@ -14292,6 +17079,7 @@
         "required": [
           "id",
           "userName",
+          "email",
           "roleId"
         ],
         "type": "object",
@@ -14302,6 +17090,12 @@
           },
           "userName": {
             "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "roleId": {
             "type": [
@@ -14323,6 +17117,9 @@
     }
   },
   "tags": [
+    {
+      "name": "AttendanceManagement"
+    },
     {
       "name": "Auth"
     },
@@ -14355,6 +17152,18 @@
     },
     {
       "name": "StudentAttendances"
+    },
+    {
+      "name": "Email"
+    },
+    {
+      "name": "MemorizeManagment"
+    },
+    {
+      "name": "Pdf"
+    },
+    {
+      "name": "PointsManagment"
     },
     {
       "name": "TeacherAcademic"

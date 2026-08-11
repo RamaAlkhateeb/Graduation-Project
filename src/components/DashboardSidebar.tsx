@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronDown,
   Menu,
+  X,
   CalendarDays,
   BookMarked,
   ClipboardCheck,
@@ -60,8 +61,26 @@ const menuItems: MenuItem[] = [
   { icon: Mail, label: "البريد الإلكتروني", path: "/email" },
 ];
 
+const useIsDesktop = () => {
+  const [isDesktop, setIsDesktop] = useState(
+    () => window.matchMedia("(min-width: 1024px)").matches
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return isDesktop;
+};
+
 const DashboardSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isDesktop = useIsDesktop();
   const location = useLocation();
 
   const [openMenus, setOpenMenus] = useState<string[]>(() =>
@@ -76,20 +95,34 @@ const DashboardSidebar = () => {
     );
   };
 
+  const handleNavigate = () => {
+    if (!isDesktop) {
+      setMobileOpen(false);
+    }
+  };
+
+  // On mobile the sidebar is always full width (labels shown); `collapsed` only affects desktop.
+  const showLabels = !collapsed || !isDesktop;
+
   return (
     <>
-      {/* Mobile button */}
+      {/* Mobile menu button */}
       <button
-        className="fixed top-4 right-4 z-50 lg:hidden print:hidden rounded-lg bg-green-700 p-2 text-white shadow-lg"
-        onClick={() => setCollapsed(!collapsed)}
+        className={`fixed top-4 right-4 z-50 lg:hidden print:hidden rounded-lg bg-green-700 p-2 text-white shadow-lg transition-opacity ${
+          mobileOpen ? "opacity-0 pointer-events-none" : ""
+        }`}
+        onClick={() => setMobileOpen(true)}
+        aria-label="فتح القائمة"
       >
         <Menu className="h-5 w-5" />
       </button>
 
       <aside
-        className={`fixed top-0 right-0 h-screen z-40 print:hidden transition-all duration-300 flex flex-col bg-white border-l shadow-sm ${
-          collapsed ? "w-20" : "w-64"
-        } ${collapsed ? "max-lg:-translate-x-full" : ""} lg:translate-x-0`}
+        className={`flex flex-col bg-white border-l shadow-sm print:hidden transition-all duration-300 ease-in-out overflow-hidden ${
+          mobileOpen ? "w-64 visible" : "w-0 invisible"
+        } lg:visible lg:w-64 lg:h-screen lg:sticky lg:top-0 ${
+          collapsed ? "lg:w-20" : ""
+        }`}
       >
         {/* Header */}
         <div className="p-5 border-b">
@@ -98,13 +131,23 @@ const DashboardSidebar = () => {
               <img src="/icon.png" className="w-8 h-8 object-contain" />
             </div>
 
-            {!collapsed && (
-              <div>
+            {showLabels && (
+              <div className="flex-1">
                 <h1 className="text-base font-bold text-gray-800">
                   مسجد الأشمر
                 </h1>
               </div>
             )}
+
+            {/* Mobile close button */}
+            <button
+              type="button"
+              className="lg:hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition"
+              onClick={() => setMobileOpen(false)}
+              aria-label="إغلاق القائمة"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -143,7 +186,7 @@ const DashboardSidebar = () => {
                       <item.icon className="h-5 w-5" />
                     </div>
 
-                    {!collapsed && (
+                    {showLabels && (
                       <>
                         <span className="text-sm font-medium flex-1 text-right">
                           {item.label}
@@ -158,7 +201,7 @@ const DashboardSidebar = () => {
                   </button>
 
                   {/* التبويبات الفرعية */}
-                  {!collapsed && isOpen && (
+                  {showLabels && isOpen && (
                     <div className="mt-1 mr-4 pr-3 border-r-2 border-green-100 space-y-1">
                       {item.children.map((child) => {
                         const isActive = location.pathname === child.path;
@@ -167,6 +210,7 @@ const DashboardSidebar = () => {
                           <Link
                             key={child.path}
                             to={child.path}
+                            onClick={handleNavigate}
                             className={`relative flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${
                               isActive
                                 ? "bg-green-50 text-green-700"
@@ -204,6 +248,7 @@ const DashboardSidebar = () => {
               <Link
                 key={item.path}
                 to={item.path!}
+                onClick={handleNavigate}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
                   isActive
                     ? "bg-green-50 text-green-700"
@@ -224,7 +269,7 @@ const DashboardSidebar = () => {
                   <item.icon className="h-5 w-5" />
                 </div>
 
-                {!collapsed && (
+                {showLabels && (
                   <span className="text-sm font-medium">{item.label}</span>
                 )}
               </Link>
@@ -232,7 +277,7 @@ const DashboardSidebar = () => {
           })}
         </nav>
 
-        {/* Collapse button */}
+        {/* Collapse button (desktop only) */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="hidden lg:flex items-center justify-center p-3 border-t text-gray-500 hover:text-gray-800 transition"
@@ -244,13 +289,6 @@ const DashboardSidebar = () => {
           />
         </button>
       </aside>
-
-      {/* Spacer */}
-      <div
-        className={`hidden lg:block print:hidden flex-shrink-0 transition-all duration-300 ${
-          collapsed ? "w-20" : "w-64"
-        }`}
-      />
     </>
   );
 };

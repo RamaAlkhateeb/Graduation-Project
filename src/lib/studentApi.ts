@@ -23,9 +23,11 @@ export interface CreateStudentRequest {
   parentWhatsAppPhoneNumber: string;
   dateOfBirth: string;
   landlineNumber?: string | null;
+  additionalInformations?: string | null;
   userName: string;
   password: string;
   academicStageId: string;
+  email: string;
 }
 
 export interface UpdateStudentRequest {
@@ -38,7 +40,9 @@ export interface UpdateStudentRequest {
   parentWhatsAppPhoneNumber?: string | null;
   dateOfBirth?: string | null;
   landlineNumber?: string | null;
+  additionalInformations?: string | null;
   academicStageId?: string | null;
+  email?: string | null;
 }
 
 export interface StudentDetailDto {
@@ -52,9 +56,12 @@ export interface StudentDetailDto {
   parentWhatsAppPhoneNumber: string;
   dateOfBirth: string;
   landlineNumber?: string | null;
+  additionalInformations?: string | null;
   academicStageId: string;
   academicStage?: AcademicStageDto | null;
   memorizedQuranParts?: MemorizedQuranPartDto[];
+  userName?: string | null;
+  email?: string | null;
 }
 
 export interface StudentListParams {

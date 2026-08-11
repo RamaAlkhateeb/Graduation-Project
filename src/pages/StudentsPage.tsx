@@ -154,9 +154,11 @@ const emptyStudentPayload: CreateStudentRequest = {
     parentWhatsAppPhoneNumber: "",
     dateOfBirth: "",
     landlineNumber: "",
+    additionalInformations: "",
     userName: "",
     password: "",
     academicStageId: "",
+    email: "",
 };
 
 const defaultStudentFilters: StudentFilters = {
@@ -178,6 +180,8 @@ const studentFields: StudentFormField[] = [
     { key: "parentWhatsAppPhoneNumber", label: "واتساب ولي الأمر" },
     { key: "dateOfBirth", label: "تاريخ الميلاد", type: "date" },
     { key: "landlineNumber", label: "الهاتف الأرضي", optional: true },
+    { key: "email", label: "البريد الإلكتروني", type: "email" },
+    { key: "additionalInformations", label: "معلومات إضافية", optional: true },
 ];
 
 const createOnlyFields: CreateOnlyField[] = [
@@ -195,9 +199,11 @@ const fieldLabels: Record<StudentFieldKey, string> = {
     parentWhatsAppPhoneNumber: "واتساب ولي الأمر",
     dateOfBirth: "تاريخ الميلاد",
     landlineNumber: "الهاتف الأرضي",
+    additionalInformations: "معلومات إضافية",
     userName: "اسم المستخدم",
     password: "كلمة المرور",
     academicStageId: "المرحلة الدراسية",
+    email: "البريد الإلكتروني",
 };
 
 const excelStudentFieldAliases: Record<keyof CreateStudentRequest, string[]> = {
@@ -210,9 +216,11 @@ const excelStudentFieldAliases: Record<keyof CreateStudentRequest, string[]> = {
     parentWhatsAppPhoneNumber: ["parentWhatsAppPhoneNumber", "parent whatsapp phone number", "whatsapp", "واتساب ولي الأمر"],
     dateOfBirth: ["dateOfBirth", "date of birth", "birth date", "تاريخ الميلاد"],
     landlineNumber: ["landlineNumber", "landline number", "landline", "الهاتف الأرضي"],
+    additionalInformations: ["additionalInformations", "additional informations", "additional info", "معلومات إضافية", "ملاحظات"],
     userName: ["userName", "username", "user name", "اسم المستخدم"],
     password: ["password", "كلمة المرور"],
     academicStageId: ["academicStageId", "academic stage id", "academicStage", "academic stage", "المرحلة الدراسية"],
+    email: ["email", "email address", "البريد الإلكتروني", "البريد الالكتروني", "ايميل"],
 };
 
 const requiredCreateFields: StudentFieldKey[] = [
@@ -227,6 +235,7 @@ const requiredCreateFields: StudentFieldKey[] = [
     "academicStageId",
     "userName",
     "password",
+    "email",
 ];
 
 const requiredUpdateFields: StudentFieldKey[] = requiredCreateFields.filter(
@@ -343,9 +352,12 @@ const toStudentDetail = (student: Partial<StudentDetailDto> & { id: string }): S
     parentWhatsAppPhoneNumber: textValue(student.parentWhatsAppPhoneNumber),
     dateOfBirth: normalizeDateInput(student.dateOfBirth),
     landlineNumber: student.landlineNumber ?? "",
+    additionalInformations: student.additionalInformations ?? null,
     academicStageId: textValue(student.academicStageId),
     academicStage: student.academicStage ?? null,
     memorizedQuranParts: student.memorizedQuranParts ?? [],
+    userName: student.userName ?? null,
+    email: student.email ?? null,
 });
 
 const unwrapSingleStudent = (data: unknown): StudentDetailDto | null => {
@@ -644,9 +656,11 @@ const StudentsPage = () => {
         parentWhatsAppPhoneNumber: trimText(payload.parentWhatsAppPhoneNumber),
         dateOfBirth: normalizeDateInput(payload.dateOfBirth),
         landlineNumber: trimText(payload.landlineNumber) || null,
+        additionalInformations: trimText(payload.additionalInformations) || null,
         userName: trimText(payload.userName),
         password: trimText(payload.password),
         academicStageId: trimText(payload.academicStageId),
+        email: trimText(payload.email),
     });
 
     const buildUpdatePayload = (student: StudentDetailDto): UpdateStudentRequest => ({
@@ -659,7 +673,9 @@ const StudentsPage = () => {
         parentWhatsAppPhoneNumber: trimText(student.parentWhatsAppPhoneNumber),
         dateOfBirth: normalizeDateInput(student.dateOfBirth),
         landlineNumber: trimText(student.landlineNumber) || null,
+        additionalInformations: trimText(student.additionalInformations) || null,
         academicStageId: trimText(student.academicStageId),
+        email: trimText(student.email) || null,
     });
 
     const normalizeHeaderKey = (key: string) =>
@@ -815,9 +831,11 @@ const StudentsPage = () => {
             parentWhatsAppPhoneNumber: getExcelValue(row, excelStudentFieldAliases.parentWhatsAppPhoneNumber),
             dateOfBirth: dateOfBirthValue,
             landlineNumber: getExcelValue(row, excelStudentFieldAliases.landlineNumber),
+            additionalInformations: getExcelValue(row, excelStudentFieldAliases.additionalInformations),
             userName: getExcelValue(row, excelStudentFieldAliases.userName),
             password: getExcelValue(row, excelStudentFieldAliases.password),
             academicStageId: findAcademicStageIdFromRow(academicStageValue),
+            email: getExcelValue(row, excelStudentFieldAliases.email),
         });
 
         const errors = validateStudentForm(payload, requiredCreateFields);
@@ -857,6 +875,8 @@ const StudentsPage = () => {
                 "academicStageId",
                 "userName",
                 "password",
+                "email",
+                "additionalInformations",
             ],
             [
                 "Student Name",
@@ -871,6 +891,8 @@ const StudentsPage = () => {
                 academicStages[0]?.id ?? "academic-stage-id",
                 "student.username",
                 "password",
+                "student@example.com",
+                "",
             ],
         ]);
 
@@ -1127,8 +1149,9 @@ const StudentsPage = () => {
             student.lastName,
             student.parentPhoneNumber,
             student.schoolName,
+            student.email,
             academicStageLabel,
-        ].some((value) => value.toLowerCase().includes(query));
+        ].some((value) => value?.toLowerCase().includes(query));
     });
 
     const handleApplyStudentFilters = () => {
@@ -1642,6 +1665,7 @@ const StudentsPage = () => {
                                 <th className="p-4 text-right">اسم الأب</th>
                                 <th className="p-4 text-right">الكنية</th>
                                 <th className="p-4 text-right">هاتف ولي الأمر</th>
+                                <th className="p-4 text-right">البريد الإلكتروني</th>
                                 <th className="p-4 text-right">المدرسة</th>
                                 <th className="p-4 text-right">المرحلة الدراسية</th>
                                 <th className="p-4 text-right">الإجراءات</th>
@@ -1651,13 +1675,13 @@ const StudentsPage = () => {
                         <tbody>
                             {isLoading && students.length === 0 ? (
                                 <tr>
-                                    <td className="p-4 text-center text-muted-foreground" colSpan={7}>
+                                    <td className="p-4 text-center text-muted-foreground" colSpan={8}>
                                         جاري تحميل البيانات...
                                     </td>
                                 </tr>
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td className="p-4 text-center text-muted-foreground" colSpan={7}>
+                                    <td className="p-4 text-center text-muted-foreground" colSpan={8}>
                                         لا توجد بيانات مطابقة
                                     </td>
                                 </tr>
@@ -1689,6 +1713,7 @@ const StudentsPage = () => {
                                             <td className="p-4">{student.fatherName}</td>
                                             <td className="p-4">{student.lastName}</td>
                                             <td className="p-4">{student.parentPhoneNumber}</td>
+                                            <td className="p-4">{student.email || "-"}</td>
                                             <td className="p-4">{student.schoolName}</td>
                                             <td className="p-4">
                                                 {getAcademicStageLabel(student.academicStage) ||
@@ -1864,6 +1889,7 @@ const StudentsPage = () => {
                                     ["اسم المدرسة", selectedStudent.schoolName],
                                     ["تاريخ الميلاد", formatDateFieldValue(selectedStudent.dateOfBirth) || "غير محدد"],
                                     ["الهاتف الأرضي", selectedStudent.landlineNumber || "غير محدد"],
+                                    ["البريد الإلكتروني", selectedStudent.email || "غير محدد"],
                                     [
                                         "المرحلة الدراسية",
                                         getAcademicStageLabel(selectedStudent.academicStage) ||
