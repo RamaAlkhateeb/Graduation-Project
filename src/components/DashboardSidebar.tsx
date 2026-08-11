@@ -18,6 +18,7 @@ import {
   UserCheck,
   UserMinus,
   UserPlus,
+  Settings,
 } from "lucide-react";
 
 interface MenuChild {
@@ -59,6 +60,7 @@ const menuItems: MenuItem[] = [
   { icon: FileText, label: "الاستبيانات والاختبارات", path: "/form" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Mail, label: "البريد الإلكتروني", path: "/email" },
+  { icon: Settings, label: "الإعدادات", path: "/settings" },
 ];
 
 const useIsDesktop = () => {

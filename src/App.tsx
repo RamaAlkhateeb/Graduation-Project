@@ -1,6 +1,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import CustomCursor from "@/components/CustomCursor";
+import CustomScrollbar from "@/components/CustomScrollbar";
+import { RedirectIfAuthed, RequireAuth } from "@/components/AuthGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
@@ -22,6 +25,7 @@ import FormPreviewPage from './pages/FormPreviewPage';
 import FormFillPage from './pages/FormFillPage';
 import FormResponsesPage from './pages/FormResponsesPage';
 import EmailPage from "./pages/EmailPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import AttendanceCheckInPage from "./pages/AttendanceCheckInPage";
 import AttendanceCheckOutPage from "./pages/AttendanceCheckOutPage";
@@ -33,30 +37,43 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CustomCursor />
+      <CustomScrollbar />
       <HashRouter>
         <Routes>
-          <Route path="/index" element={<Index />} />
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/semesters" element={<SemestersPage />} />
-           <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/teachers" element={<TeachersPage />} />
-          <Route path="/students" element={<StudentsPage />} />
-          <Route path="/circles" element={<CirclesPage />} />
-          <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
-          <Route path="/enrollments/student" element={<StudentEnrollmentPage />} />
-          <Route path="/enrollments/teacher" element={<TeacherEnrollmentPage />} />
-          <Route path="/attendance/daily" element={<DailyAttendancePage/>}/>
-          <Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
-          <Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/exams" element={<ExamsPage />} />
-          <Route path="/form" element={<FormListPage />} />
-           <Route path="/fill/:accessToken" element={<FormFillPage />} />
-           <Route path="/forms/new" element={<FormBuilderPage />} />
-        <Route path="/forms/:id/edit" element={<FormBuilderPage />} />
-        <Route path="/forms/:id/preview" element={<FormPreviewPage /> }/>
-        <Route path="/forms/:id/responses" element={<FormResponsesPage />} />
-          <Route path="/email" element={<EmailPage />} />
+          {/* Public: login page — logged-in users are sent straight to the dashboard */}
+          <Route element={<RedirectIfAuthed />}>
+            <Route path="/" element={<LoginPage />} />
+          </Route>
+
+          {/* Public: students filling a shared form don't need an admin session */}
+          <Route path="/fill/:accessToken" element={<FormFillPage />} />
+
+          {/* Protected: everything else requires a valid persisted token */}
+          <Route element={<RequireAuth />}>
+            <Route path="/index" element={<Index />} />
+            <Route path="/semesters" element={<SemestersPage />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/teachers" element={<TeachersPage />} />
+            <Route path="/students" element={<StudentsPage />} />
+            <Route path="/circles" element={<CirclesPage />} />
+            <Route path="/circles/:circleId" element={<CircleDetailsPage />} />
+            <Route path="/enrollments/student" element={<StudentEnrollmentPage />} />
+            <Route path="/enrollments/teacher" element={<TeacherEnrollmentPage />} />
+            <Route path="/attendance/daily" element={<DailyAttendancePage />} />
+            <Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
+            <Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/exams" element={<ExamsPage />} />
+            <Route path="/form" element={<FormListPage />} />
+            <Route path="/forms/new" element={<FormBuilderPage />} />
+            <Route path="/forms/:id/edit" element={<FormBuilderPage />} />
+            <Route path="/forms/:id/preview" element={<FormPreviewPage />} />
+            <Route path="/forms/:id/responses" element={<FormResponsesPage />} />
+            <Route path="/email" element={<EmailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
