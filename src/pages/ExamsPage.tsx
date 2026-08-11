@@ -1,5 +1,6 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { uuid } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,11 +62,11 @@ interface ExamAttemptResult {
 }
 
 const emptyQuestion = (): Question => ({
-  id: crypto.randomUUID(),
+  id: uuid(),
   title: "",
   options: [
-    { id: crypto.randomUUID(), text: "" },
-    { id: crypto.randomUUID(), text: "" },
+    { id: uuid(), text: "" },
+    { id: uuid(), text: "" },
   ],
   correctOptionId: null,
   points: 1,
@@ -119,7 +120,7 @@ const ExamsPage = () => {
     setQuestions(
       questions.map((q) =>
         q.id === questionId
-          ? { ...q, options: [...q.options, { id: crypto.randomUUID(), text: "" }] }
+          ? { ...q, options: [...q.options, { id: uuid(), text: "" }] }
           : q
       )
     );
@@ -183,7 +184,7 @@ const ExamsPage = () => {
       return;
     }
 
-    const examId = crypto.randomUUID();
+    const examId = uuid();
 
     const exam: Exam = {
       id: examId,

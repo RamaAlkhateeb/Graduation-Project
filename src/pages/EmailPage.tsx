@@ -30,6 +30,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { uuid } from "@/lib/utils";
 import { teacherApi } from "@/api/personApi";
 import { emailApi } from "@/api/emailApi";
 import type { EmailAddressDto, EmailAttachmentDto } from "@/types/email";
@@ -61,7 +62,7 @@ interface SentHistoryEntry {
 }
 
 const emptyManualRow = (): ManualRow => ({
-  id: crypto.randomUUID(),
+  id: uuid(),
   name: "",
   address: "",
 });
@@ -177,7 +178,7 @@ const EmailPage = () => {
       for (const file of Array.from(files)) {
         const content = await readFileAsBase64(file);
         newAttachments.push({
-          id: crypto.randomUUID(),
+          id: uuid(),
           fileName: file.name,
           contentType: file.type || "application/octet-stream",
           content,
@@ -276,7 +277,7 @@ const EmailPage = () => {
 
       setHistory((prev) => [
         {
-          id: crypto.randomUUID(),
+          id: uuid(),
           subject: subject.trim(),
           recipientsCount: to.length,
           recipientsPreview: preview,

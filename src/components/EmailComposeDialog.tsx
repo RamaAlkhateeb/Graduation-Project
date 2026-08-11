@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, Paperclip, Plus, Trash2, X } from 'lucide-react';
+import { uuid } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,7 +44,7 @@ interface AttachmentRow {
 }
 
 const emptyManualRow = (): ManualRow => ({
-  id: crypto.randomUUID(),
+  id: uuid(),
   name: '',
   address: '',
 });
@@ -158,7 +159,7 @@ const EmailComposeDialog = () => {
       for (const file of Array.from(files)) {
         const content = await readFileAsBase64(file);
         newAttachments.push({
-          id: crypto.randomUUID(),
+          id: uuid(),
           fileName: file.name,
           contentType: file.type || 'application/octet-stream',
           content,
