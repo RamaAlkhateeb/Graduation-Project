@@ -31,6 +31,8 @@ import AttendanceCheckInPage from "./pages/AttendanceCheckInPage";
 import AttendanceCheckOutPage from "./pages/AttendanceCheckOutPage";
 import StatusesPage from "./pages/StatusesPage";
 import StudentMemorizationPage from "./pages/StudentMemorizationPage";
+import TeacherAttendanceCheckInPage from "./pages/TeacherAttendanceCheckInPage";
+import TeacherAttendanceCheckOutPage from "./pages/TeacherAttendanceCheckOutPage";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +68,8 @@ const App = () => (
             <Route path="/attendance/daily" element={<DailyAttendancePage />} />
             <Route path="/attendance/check-in" element={<AttendanceCheckInPage />} />
             <Route path="/attendance/check-out" element={<AttendanceCheckOutPage />} />
+            <Route path="/attendance/teacher-check-in" element={<TeacherAttendanceCheckInPage />} />
+            <Route path="/attendance/teacher-check-out" element={<TeacherAttendanceCheckOutPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/exams" element={<ExamsPage />} />
             <Route path="/form" element={<FormListPage />} />

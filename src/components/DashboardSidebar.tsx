@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -22,20 +22,53 @@ import {
   Palette,
 } from "lucide-react";
 
-interface MenuChild {
+// ─── أنواع القائمة (تدعم أي عدد من المستويات) ─────────────────────────────
+
+interface MenuLeaf {
   icon: typeof LayoutDashboard;
   label: string;
   path: string;
 }
 
-interface MenuItem {
+interface MenuGroup {
   icon: typeof LayoutDashboard;
   label: string;
-  path?: string;
-  children?: MenuChild[];
+  children: MenuNode[];
 }
 
-const menuItems: MenuItem[] = [
+type MenuNode = MenuLeaf | MenuGroup;
+
+const isGroup = (node: MenuNode): node is MenuGroup =>
+  Array.isArray((node as MenuGroup).children);
+
+const collectPaths = (node: MenuNode): string[] =>
+  isGroup(node) ? node.children.flatMap(collectPaths) : [node.path];
+
+const buildInitialOpenKeys = (
+  nodes: MenuNode[],
+  pathname: string,
+  prefix = ""
+): string[] => {
+  let keys: string[] = [];
+
+  nodes.forEach((node) => {
+    const key = prefix ? `${prefix}/${node.label}` : node.label;
+
+    if (isGroup(node)) {
+      const childActive = collectPaths(node).includes(pathname);
+      if (childActive) {
+        keys.push(key);
+        keys = keys.concat(buildInitialOpenKeys(node.children, pathname, key));
+      }
+    }
+  });
+
+  return keys;
+};
+
+// ─── القائمة ──────────────────────────────────────────────────────────────
+
+const menuItems: MenuNode[] = [
   { icon: LayoutDashboard, label: "لوحة التحكم", path: "/index" },
   { icon: CalendarDays, label: "الفصول", path: "/semesters" },
   { icon: BookMarked, label: "الكورسات", path: "/courses" },
@@ -54,8 +87,22 @@ const menuItems: MenuItem[] = [
     icon: ClipboardCheck,
     label: "تسجيل الحضور",
     children: [
-      { icon: UserCheck, label: "تسجيل حضور الطالب", path: "/attendance/check-in" },
-      { icon: UserMinus, label: "تسجيل خروج الطالب", path: "/attendance/check-out" },
+      {
+        icon: GraduationCap,
+        label: "الطلاب",
+        children: [
+          { icon: UserCheck, label: "تسجيل حضور الطالب", path: "/attendance/check-in" },
+          { icon: UserMinus, label: "تسجيل خروج الطالب", path: "/attendance/check-out" },
+        ],
+      },
+      {
+        icon: Users,
+        label: "الأساتذة",
+        children: [
+          { icon: UserCheck, label: "تسجيل حضور الأستاذ", path: "/attendance/teacher-check-in" },
+          { icon: UserMinus, label: "تسجيل خروج الأستاذ", path: "/attendance/teacher-check-out" },
+        ],
+      },
     ],
   },
   { icon: FileText, label: "الاستبيانات والاختبارات", path: "/form" },
@@ -70,16 +117,130 @@ const useIsDesktop = () => {
     () => window.matchMedia("(min-width: 1024px)").matches
   );
 
-  useEffect(() => {
+  useState(() => {
     const mediaQuery = window.matchMedia("(min-width: 1024px)");
     const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
-
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  });
 
   return isDesktop;
 };
+
+// ─── عنصر قائمة قابل للتكرار على أي عمق ────────────────────────────────────
+
+const SidebarMenuNode = ({
+  node,
+  keyPath,
+  level,
+  openMenus,
+  toggleMenu,
+  onNavigate,
+  showLabels,
+  currentPath,
+}: {
+  node: MenuNode;
+  keyPath: string;
+  level: number;
+  openMenus: string[];
+  toggleMenu: (key: string) => void;
+  onNavigate: () => void;
+  showLabels: boolean;
+  currentPath: string;
+}) => {
+  if (!isGroup(node)) {
+    const isActive = currentPath === node.path;
+
+    return (
+      <Link
+        to={node.path}
+        onClick={onNavigate}
+        className={`relative flex items-center gap-3 rounded-xl transition-all duration-200 group ${
+          level === 0 ? "px-3 py-2.5" : "px-3 py-2"
+        } ${isActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-100"}`}
+      >
+        {isActive && (
+          <span className="absolute right-0 top-0 h-full w-1 bg-green-600 rounded-l-md" />
+        )}
+
+        <div
+          className={`flex items-center justify-center rounded-lg transition ${
+            level === 0 ? "w-9 h-9" : "w-7 h-7"
+          } ${
+            isActive
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+          }`}
+        >
+          <node.icon className={level === 0 ? "h-5 w-5" : "h-4 w-4"} />
+        </div>
+
+        {showLabels && <span className="text-sm font-medium">{node.label}</span>}
+      </Link>
+    );
+  }
+
+  const paths = collectPaths(node);
+  const isChildActive = paths.includes(currentPath);
+  const isOpen = openMenus.includes(keyPath) || isChildActive;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => toggleMenu(keyPath)}
+        className={`relative w-full flex items-center gap-3 rounded-xl transition-all duration-200 group ${
+          level === 0 ? "px-3 py-2.5" : "px-3 py-2"
+        } ${isChildActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-100"}`}
+      >
+        {isChildActive && (
+          <span className="absolute right-0 top-0 h-full w-1 bg-green-600 rounded-l-md" />
+        )}
+
+        <div
+          className={`flex items-center justify-center rounded-lg transition ${
+            level === 0 ? "w-9 h-9" : "w-7 h-7"
+          } ${
+            isChildActive
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+          }`}
+        >
+          <node.icon className={level === 0 ? "h-5 w-5" : "h-4 w-4"} />
+        </div>
+
+        {showLabels && (
+          <>
+            <span className="text-sm font-medium flex-1 text-right">{node.label}</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            />
+          </>
+        )}
+      </button>
+
+      {showLabels && isOpen && (
+        <div className="mt-1 mr-4 pr-3 border-r-2 border-green-100 space-y-1">
+          {node.children.map((child) => (
+            <SidebarMenuNode
+              key={`${keyPath}/${child.label}`}
+              node={child}
+              keyPath={`${keyPath}/${child.label}`}
+              level={level + 1}
+              openMenus={openMenus}
+              toggleMenu={toggleMenu}
+              onNavigate={onNavigate}
+              showLabels={showLabels}
+              currentPath={currentPath}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── الشريط الجانبي ─────────────────────────────────────────────────────────
 
 const DashboardSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -88,14 +249,12 @@ const DashboardSidebar = () => {
   const location = useLocation();
 
   const [openMenus, setOpenMenus] = useState<string[]>(() =>
-    menuItems
-      .filter((item) => item.children?.some((child) => location.pathname === child.path))
-      .map((item) => item.label)
+    buildInitialOpenKeys(menuItems, location.pathname)
   );
 
-  const toggleMenu = (label: string) => {
+  const toggleMenu = (key: string) => {
     setOpenMenus((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
 
@@ -137,13 +296,10 @@ const DashboardSidebar = () => {
 
             {showLabels && (
               <div className="flex-1">
-                <h1 className="text-base font-bold text-gray-800">
-                  مسجد الأشمر
-                </h1>
+                <h1 className="text-base font-bold text-gray-800">مسجد الأشمر</h1>
               </div>
             )}
 
-            {/* Mobile close button */}
             <button
               type="button"
               className="lg:hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition"
@@ -157,128 +313,19 @@ const DashboardSidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => {
-            // ── عنصر له تبويبات فرعية ──
-            if (item.children) {
-              const isChildActive = item.children.some(
-                (child) => location.pathname === child.path
-              );
-              const isOpen = openMenus.includes(item.label) || isChildActive;
-
-              return (
-                <div key={item.label}>
-                  <button
-                    type="button"
-                    onClick={() => toggleMenu(item.label)}
-                    className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                      isChildActive
-                        ? "bg-green-50 text-green-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {isChildActive && (
-                      <span className="absolute right-0 top-0 h-full w-1 bg-green-600 rounded-l-md" />
-                    )}
-
-                    <div
-                      className={`flex items-center justify-center w-9 h-9 rounded-lg transition ${
-                        isChildActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                      }`}
-                    >
-                      <item.icon className="h-5 w-5" />
-                    </div>
-
-                    {showLabels && (
-                      <>
-                        <span className="text-sm font-medium flex-1 text-right">
-                          {item.label}
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform ${
-                            isOpen ? "rotate-180" : ""
-                          }`}
-                        />
-                      </>
-                    )}
-                  </button>
-
-                  {/* التبويبات الفرعية */}
-                  {showLabels && isOpen && (
-                    <div className="mt-1 mr-4 pr-3 border-r-2 border-green-100 space-y-1">
-                      {item.children.map((child) => {
-                        const isActive = location.pathname === child.path;
-
-                        return (
-                          <Link
-                            key={child.path}
-                            to={child.path}
-                            onClick={handleNavigate}
-                            className={`relative flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${
-                              isActive
-                                ? "bg-green-50 text-green-700"
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            {isActive && (
-                              <span className="absolute right-0 top-0 h-full w-1 bg-green-600 rounded-l-md" />
-                            )}
-
-                            <div
-                              className={`flex items-center justify-center w-7 h-7 rounded-lg transition ${
-                                isActive
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                              }`}
-                            >
-                              <child.icon className="h-4 w-4" />
-                            </div>
-
-                            <span className="text-sm font-medium">{child.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            // ── عنصر عادي بدون تبويبات فرعية ──
-            const isActive = location.pathname === item.path;
-
-            return (
-              <Link
-                key={item.path}
-                to={item.path!}
-                onClick={handleNavigate}
-                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                  isActive
-                    ? "bg-green-50 text-green-700"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {isActive && (
-                  <span className="absolute right-0 top-0 h-full w-1 bg-green-600 rounded-l-md" />
-                )}
-
-                <div
-                  className={`flex items-center justify-center w-9 h-9 rounded-lg transition ${
-                    isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                </div>
-
-                {showLabels && (
-                  <span className="text-sm font-medium">{item.label}</span>
-                )}
-              </Link>
-            );
-          })}
+          {menuItems.map((item) => (
+            <SidebarMenuNode
+              key={item.label}
+              node={item}
+              keyPath={item.label}
+              level={0}
+              openMenus={openMenus}
+              toggleMenu={toggleMenu}
+              onNavigate={handleNavigate}
+              showLabels={showLabels}
+              currentPath={location.pathname}
+            />
+          ))}
         </nav>
 
         {/* Collapse button (desktop only) */}
@@ -287,9 +334,7 @@ const DashboardSidebar = () => {
           className="hidden lg:flex items-center justify-center p-3 border-t text-gray-500 hover:text-gray-800 transition"
         >
           <ChevronLeft
-            className={`h-5 w-5 transition-transform ${
-              collapsed ? "rotate-180" : ""
-            }`}
+            className={`h-5 w-5 transition-transform ${collapsed ? "rotate-180" : ""}`}
           />
         </button>
       </aside>
