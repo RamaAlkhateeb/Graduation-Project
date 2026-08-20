@@ -20,6 +20,7 @@ import {
   UserPlus,
   Settings,
   Palette,
+  Award,
 } from "lucide-react";
 
 // ─── أنواع القائمة (تدعم أي عدد من المستويات) ─────────────────────────────
@@ -106,6 +107,7 @@ const menuItems: MenuNode[] = [
     ],
   },
   { icon: FileText, label: "الاستبيانات والاختبارات", path: "/form" },
+  { icon: Award, label: "النقاط", path: "/points" },
   { icon: Palette, label: "حالات الحفظ", path: "/statuses" },
   { icon: BarChart3, label: "التقارير", path: "/reports" },
   { icon: Mail, label: "البريد الإلكتروني", path: "/email" },

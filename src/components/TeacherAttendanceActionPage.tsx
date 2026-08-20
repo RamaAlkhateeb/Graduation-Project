@@ -36,16 +36,28 @@ interface TeacherRow {
   email?: string | null;
 }
 
-interface TeacherEnrollment {
-  id: string; // enrollmentId
-  teacherId: string;
-  isMainTeacher: boolean;
-  classId: string;
-}
-
 interface PagedResponse<T> {
   items?: T[];
   data?: T[];
+}
+
+// عنصر واحد من استجابة /attendance-management/teachers/{teacherId}/attendance-status
+// يمثل حالة الأستاذ في إحدى الحلقات المسجل بها (وليس بالضرورة الحلقة الحالية فقط)
+interface TeacherAttendanceStatusItem {
+  halaqaId: string;
+  halaqaName: string;
+  courseId: string;
+  courseName: string;
+  semesterId: string;
+  semesterName: string;
+  enrollmentId: string;
+  status: string; // "Online" | "Absent" | ...
+  startTime: string | null;
+  endTime: string | null;
+}
+
+interface TeacherAttendanceStatusResponse {
+  data: TeacherAttendanceStatusItem[];
 }
 
 const API_BASE_URL =
@@ -67,11 +79,13 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
   const [selectedHalaqaId, setSelectedHalaqaId] = useState("");
 
   const [teachers, setTeachers] = useState<TeacherRow[]>([]);
-  // teacherId → enrollmentId (لهذه الحلقة تحديدًا)
+  // teacherId → enrollmentId (لهذه الحلقة تحديدًا)، مأخوذ من عنصر attendance-status المطابق لـ halaqaId
   const [enrollmentByTeacher, setEnrollmentByTeacher] = useState<Map<string, string>>(
     new Map()
   );
   const [markedIds, setMarkedIds] = useState<Set<string>>(new Set());
+  // الأساتذة الذين حالتهم الحالية Online في هذه الحلقة تحديدًا
+  const [onlineTeacherIds, setOnlineTeacherIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const [semestersLoading, setSemestersLoading] = useState(false);
@@ -142,9 +156,11 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
   };
 
   // 1) جلب الأساتذة المسجلين في الحلقة عبر /teachers/filtered?classId=...
-  // 2) لكل أستاذ: جلب enrollments عبر /teachers/{id}/enrollments واستخراج
-  //    enrollmentId المطابق للحلقة المختارة (classId === halaqaId)
-  const fetchTeachersAndEnrollments = async (halaqaId: string) => {
+  // 2) لكل أستاذ: جلب حالته الحالية عبر
+  //    /attendance-management/teachers/{teacherId}/attendance-status
+  //    والتي تُرجع مصفوفة من كل حلقاته مع status/enrollmentId لكل حلقة،
+  //    فنستخرج منها العنصر المطابق لـ halaqaId المختارة حاليًا فقط.
+  const fetchTeachersAndStatuses = async (halaqaId: string) => {
     try {
       setTeachersLoading(true);
 
@@ -157,30 +173,45 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
       const teacherList = normalizeCollection(teachersResponse.data);
       setTeachers(teacherList);
 
-      const enrollmentResults = await Promise.allSettled(
+      const statusResults = await Promise.allSettled(
         teacherList.map((teacher) =>
-          axiosClient.get<TeacherEnrollment[] | PagedResponse<TeacherEnrollment>>(
-            `/teachers/${teacher.id}/enrollments`
+          axiosClient.get<TeacherAttendanceStatusResponse>(
+            `/attendance-management/teachers/${teacher.id}/attendance-status`
           )
         )
       );
 
-      const map = new Map<string, string>();
-      enrollmentResults.forEach((result, index) => {
+      const enrollmentMap = new Map<string, string>();
+      const online = new Set<string>();
+
+      statusResults.forEach((result, index) => {
         if (result.status !== "fulfilled") return;
-        const enrollments = normalizeCollection(result.value.data);
-        const match = enrollments.find((e) => e.classId === halaqaId);
-        if (match) {
-          map.set(teacherList[index].id, match.id);
+
+        const items = Array.isArray(result.value.data?.data) ? result.value.data.data : [];
+        const matchForThisHalaqa = items.find((item) => item.halaqaId === halaqaId);
+
+        if (matchForThisHalaqa) {
+          enrollmentMap.set(teacherList[index].id, matchForThisHalaqa.enrollmentId);
+
+          if (matchForThisHalaqa.status === "Online") {
+            online.add(teacherList[index].id);
+          }
         }
       });
 
-      setEnrollmentByTeacher(map);
+      setEnrollmentByTeacher(enrollmentMap);
+      setOnlineTeacherIds(online);
+
+      // في وضع تسجيل الحضور: من هم أونلاين بالفعل تُعرض لهم علامة الصح مباشرة
+      if (isAttendMode) {
+        setMarkedIds(new Set(online));
+      }
     } catch (error) {
       console.error(error);
       toast.error("تعذر تحميل بيانات الأساتذة");
       setTeachers([]);
       setEnrollmentByTeacher(new Map());
+      setOnlineTeacherIds(new Set());
     } finally {
       setTeachersLoading(false);
     }
@@ -200,6 +231,7 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
     setTeachers([]);
     setEnrollmentByTeacher(new Map());
     setMarkedIds(new Set());
+    setOnlineTeacherIds(new Set());
 
     if (semesterId) {
       fetchCourses(semesterId);
@@ -213,6 +245,7 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
     setTeachers([]);
     setEnrollmentByTeacher(new Map());
     setMarkedIds(new Set());
+    setOnlineTeacherIds(new Set());
 
     if (courseId) {
       fetchHalaqas(courseId);
@@ -224,9 +257,10 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
     setTeachers([]);
     setEnrollmentByTeacher(new Map());
     setMarkedIds(new Set());
+    setOnlineTeacherIds(new Set());
 
     if (halaqaId) {
-      fetchTeachersAndEnrollments(halaqaId);
+      fetchTeachersAndStatuses(halaqaId);
     }
   };
 
@@ -251,6 +285,17 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
 
       setMarkedIds((prev) => new Set(prev).add(teacher.id));
 
+      // تحديث حالة الأونلاين محليًا بعد نجاح العملية
+      setOnlineTeacherIds((prev) => {
+        const next = new Set(prev);
+        if (isAttendMode) {
+          next.add(teacher.id);
+        } else {
+          next.delete(teacher.id);
+        }
+        return next;
+      });
+
       toast.success(
         isAttendMode ? `تم تسجيل حضور ${teacher.name}` : `تم تسجيل خروج ${teacher.name}`
       );
@@ -264,12 +309,22 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
     }
   };
 
+  // في وضع تسجيل الحضور تظهر كل قائمة الأساتذة
+  // في وضع تسجيل الخروج تظهر فقط الأساتذة الذين حالتهم أونلاين حاليًا في هذه الحلقة
+  const displayedTeachers = isAttendMode
+    ? teachers
+    : teachers.filter((teacher) => onlineTeacherIds.has(teacher.id));
+
   const markedCount = markedIds.size;
 
   return (
     <DashboardLayout
       title={isAttendMode ? "تسجيل حضور الأساتذة" : "تسجيل خروج الأساتذة"}
-      subtitle="اختر الفصل ثم الكورس ثم الحلقة لعرض الأساتذة وتسجيل حضورهم أو خروجهم"
+      subtitle={
+        isAttendMode
+          ? "اختر الفصل ثم الكورس ثم الحلقة لعرض الأساتذة وتسجيل حضورهم"
+          : "اختر الفصل ثم الكورس ثم الحلقة لعرض الأساتذة الحاضرين حاليًا وتسجيل خروجهم"
+      }
     >
       <Card className="p-5 glass-card mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -341,8 +396,10 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
         {selectedHalaqaId && (
           <div className="grid grid-cols-2 gap-3 mt-5">
             <div className="rounded-lg bg-muted/50 p-3 text-center">
-              <p className="text-xs text-muted-foreground">إجمالي الأساتذة</p>
-              <p className="text-2xl font-bold">{teachers.length}</p>
+              <p className="text-xs text-muted-foreground">
+                {isAttendMode ? "إجمالي الأساتذة" : "الحاضرون حالياً"}
+              </p>
+              <p className="text-2xl font-bold">{displayedTeachers.length}</p>
             </div>
             <div className="rounded-lg bg-primary/10 p-3 text-center">
               <p className="text-xs text-muted-foreground">
@@ -386,16 +443,18 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
                 </tr>
               )}
 
-              {selectedHalaqaId && !teachersLoading && teachers.length === 0 && (
+              {selectedHalaqaId && !teachersLoading && displayedTeachers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                    لا يوجد أساتذة مسجلون في هذه الحلقة.
+                    {isAttendMode
+                      ? "لا يوجد أساتذة مسجلون في هذه الحلقة."
+                      : "لا يوجد أساتذة حاضرون حالياً في هذه الحلقة."}
                   </td>
                 </tr>
               )}
 
               {!teachersLoading &&
-                teachers.map((teacher, index) => {
+                displayedTeachers.map((teacher, index) => {
                   const isMarked = markedIds.has(teacher.id);
                   const isPending = pendingId === teacher.id;
                   const hasEnrollment = enrollmentByTeacher.has(teacher.id);
@@ -450,3 +509,4 @@ const TeacherAttendanceActionPage = ({ mode }: TeacherAttendanceActionPageProps)
 };
 
 export default TeacherAttendanceActionPage;
+

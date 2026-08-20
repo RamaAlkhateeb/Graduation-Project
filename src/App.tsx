@@ -33,6 +33,7 @@ import StatusesPage from "./pages/StatusesPage";
 import StudentMemorizationPage from "./pages/StudentMemorizationPage";
 import TeacherAttendanceCheckInPage from "./pages/TeacherAttendanceCheckInPage";
 import TeacherAttendanceCheckOutPage from "./pages/TeacherAttendanceCheckOutPage";
+import PointsPage from "./pages/PointsPage";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/email" element={<EmailPage />} />
             <Route path="/statuses" element={<StatusesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/points" element={<PointsPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
