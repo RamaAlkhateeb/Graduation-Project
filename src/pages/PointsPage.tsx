@@ -114,12 +114,14 @@ interface StudentBrief {
 
   name?: string;
   studentName?: string;
+  lastName?: string;
 
   fatherName?: string;
 
   student?: {
     id?: string;
     name?: string;
+    lastName?: string;
     fatherName?: string;
   };
 }
@@ -182,8 +184,7 @@ const formatDate = (
 };
 
 const emptyCategoryForm = {
-  name: "",
-  description: "",
+  type: "",
 };
 
 // ─────────────────────────────────────────────
@@ -209,6 +210,13 @@ const PointsPage = () => {
 
   const [halaqaStudents, setHalaqaStudents] =
     useState<StudentBrief[]>([]);
+
+  // كل الطلاب (تُستخدم فقط لترجمة studentId → الاسم في سجل النقاط)
+  const [allStudents, setAllStudents] =
+    useState<StudentBrief[]>([]);
+
+  const [allStudentsLoading, setAllStudentsLoading] =
+    useState(false);
 
   const [categories, setCategories] =
     useState<PointCategoryDto[]>([]);
@@ -570,7 +578,7 @@ const PointsPage = () => {
     };
 
   // ───────────────────────────────────────────
-  // Fetch students by halaqa
+  // Fetch students by halaqa (لنموذج منح النقاط)
   // ───────────────────────────────────────────
 
   const fetchHalaqaStudents =
@@ -613,6 +621,47 @@ const PointsPage = () => {
         setHalaqaStudents([]);
       } finally {
         setStudentsLoading(false);
+      }
+    };
+
+  // ───────────────────────────────────────────
+  // Fetch ALL students (لترجمة studentId → الاسم في سجل النقاط)
+  // ───────────────────────────────────────────
+
+  const fetchAllStudents =
+    async () => {
+      try {
+        setAllStudentsLoading(true);
+
+        const response =
+          await axiosClient.get<
+            StudentBrief[] |
+            PagedResponse<StudentBrief>
+          >(
+            "/students/filtered",
+            {
+              params: {
+                pageNumber: 1,
+                pageSize: 1000,
+              },
+            }
+          );
+
+        setAllStudents(
+          normalizeCollection(
+            response.data
+          )
+        );
+      } catch (error) {
+        console.error(error);
+
+        toast.error(
+          "تعذر تحميل قائمة الطلاب لعرض الأسماء في السجل"
+        );
+
+        setAllStudents([]);
+      } finally {
+        setAllStudentsLoading(false);
       }
     };
 
@@ -671,10 +720,88 @@ const PointsPage = () => {
     void fetchCourses();
     void fetchHalaqas();
     void fetchTeachers();
+    void fetchAllStudents();
     void fetchPoints(1);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ───────────────────────────────────────────
+  // خرائط id → اسم، تُستخدم في عرض سجل النقاط
+  // (الـ API لا يُرجع دائمًا studentName / teacherName ضمن PointDto)
+  // ───────────────────────────────────────────
+
+  const studentNameById = useMemo(() => {
+    const map = new Map<string, string>();
+
+    allStudents.forEach((student) => {
+      const id =
+        student.studentId ??
+        student.id ??
+        student.student?.id;
+
+      const firstName =
+        student.studentName ??
+        student.name ??
+        student.student?.name;
+
+      const lastName =
+        student.lastName ??
+        student.student?.lastName;
+
+      const fullName = [firstName, lastName]
+        .filter((part) => part && part.trim())
+        .join(" ");
+
+      if (id && fullName) {
+        map.set(String(id), fullName);
+      }
+    });
+
+    return map;
+  }, [allStudents]);
+
+  const teacherNameById = useMemo(() => {
+    const map = new Map<string, string>();
+
+    teachers.forEach((teacher) => {
+      if (teacher.id && teacher.name) {
+        map.set(String(teacher.id), teacher.name);
+      }
+    });
+
+    return map;
+  }, [teachers]);
+
+  const resolveStudentName = (point: PointDto) =>
+    (point.studentId
+      ? studentNameById.get(String(point.studentId))
+      : undefined) ??
+    point.studentName ??
+    point.studentId ??
+    "-";
+
+ const categoryNameById = useMemo(() => {
+  const map = new Map<string, string>();
+  categories.forEach((category) => {
+    map.set(String(category.id), category.type);
+  });
+  return map;
+}, [categories]);
+
+const resolveTeacherName = (point: PointDto) =>
+  point.teacherName ??
+  (point.givenByTeacherId
+    ? teacherNameById.get(String(point.givenByTeacherId))
+    : undefined) ??
+  "-";
+
+const resolveCategoryName = (point: PointDto) =>
+  point.categoryName ??
+  (point.categoryId
+    ? categoryNameById.get(String(point.categoryId))
+    : undefined) ??
+  "-";
 
   // ───────────────────────────────────────────
   // Filtered courses
@@ -1038,101 +1165,50 @@ const PointsPage = () => {
     setCategoryDialogOpen(true);
   };
 
-  const openEditCategory = (
-    category: PointCategoryDto
-  ) => {
-    setEditingCategory(category);
+  const openEditCategory = (category: PointCategoryDto) => {
+  setEditingCategory(category);
 
-    setCategoryForm({
-      name:
-        category.name,
+  setCategoryForm({
+    type: category.type,
+  });
 
-      description:
-        category.description ??
-        "",
-    });
+  setCategoryDialogOpen(true);
+};
 
-    setCategoryDialogOpen(true);
-  };
+  const handleSaveCategory = async () => {
+  if (!categoryForm.type.trim()) {
+    toast.error("يرجى إدخال اسم التصنيف");
+    return;
+  }
 
-  const handleSaveCategory =
-    async () => {
-      if (
-        !categoryForm.name.trim()
-      ) {
-        toast.error(
-          "يرجى إدخال اسم التصنيف"
-        );
+  try {
+    setCategorySaving(true);
 
-        return;
-      }
+    if (editingCategory) {
+      await updatePointCategory(axiosClient, editingCategory.id, {
+        type: categoryForm.type.trim(),
+      });
+      toast.success("تم تعديل التصنيف بنجاح");
+    } else {
+      await createPointCategory(axiosClient, {
+        type: categoryForm.type.trim(),
+      });
+      toast.success("تمت إضافة التصنيف بنجاح");
+    }
 
-      try {
-        setCategorySaving(true);
+    setCategoryDialogOpen(false);
+    setEditingCategory(null);
+    setCategoryForm(emptyCategoryForm);
 
-        if (editingCategory) {
-          await updatePointCategory(
-            axiosClient,
-            editingCategory.id,
-            {
-              name:
-                categoryForm.name.trim(),
-
-              description:
-                categoryForm.description.trim() ||
-                null,
-            }
-          );
-
-          toast.success(
-            "تم تعديل التصنيف بنجاح"
-          );
-        } else {
-          await createPointCategory(
-            axiosClient,
-            {
-              name:
-                categoryForm.name.trim(),
-
-              description:
-                categoryForm.description.trim() ||
-                null,
-            }
-          );
-
-          toast.success(
-            "تمت إضافة التصنيف بنجاح"
-          );
-        }
-
-        setCategoryDialogOpen(
-          false
-        );
-
-        setEditingCategory(
-          null
-        );
-
-        setCategoryForm(
-          emptyCategoryForm
-        );
-
-        const updated =
-          await getPointCategories(
-            axiosClient
-          );
-
-        setCategories(updated);
-      } catch (error) {
-        console.error(error);
-
-        toast.error(
-          "حدث خطأ أثناء حفظ التصنيف"
-        );
-      } finally {
-        setCategorySaving(false);
-      }
-    };
+    const updated = await getPointCategories(axiosClient);
+    setCategories(updated);
+  } catch (error) {
+    console.error(error);
+    toast.error("حدث خطأ أثناء حفظ التصنيف");
+  } finally {
+    setCategorySaving(false);
+  }
+};
 
   const handleDeleteCategory =
     async () => {
@@ -1674,7 +1750,7 @@ const PointsPage = () => {
                           }
                         >
                           {
-                            category.name
+                            category.type
                           }
                         </SelectItem>
                       )
@@ -1845,24 +1921,18 @@ const PointsPage = () => {
                           className="border-b border-border/50 hover:bg-muted/30 transition-colors"
                         >
                           <td className="p-4 font-medium">
-                            {
-                              point.studentName ??
-                              point.studentId
-                            }
+                            {resolveStudentName(point)}
+                            {allStudentsLoading && !point.studentName && (
+                              <Loader2 className="h-3 w-3 animate-spin inline-block mr-1" />
+                            )}
                           </td>
 
                           <td className="p-4 text-muted-foreground">
-                            {
-                              point.teacherName ??
-                              "-"
-                            }
+                            {resolveTeacherName(point)}
                           </td>
 
                           <td className="p-4 text-muted-foreground">
-                            {
-                              point.categoryName ??
-                              "-"
-                            }
+                             {resolveCategoryName(point)}
                           </td>
 
                           <td className="p-4">
@@ -1982,80 +2052,28 @@ const PointsPage = () => {
               </DialogTrigger>
 
               <DialogContent dir="rtl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCategory
-                      ? "تعديل تصنيف"
-                      : "إضافة تصنيف"}
-                  </DialogTitle>
-                </DialogHeader>
+  <DialogHeader>
+    <DialogTitle>{ editingCategory ? "تعديل تصنيف" : "إضافة تصنيف"}</DialogTitle>
+  </DialogHeader>
 
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="category-name">
-                      الاسم
-                    </Label>
+  <div className="space-y-4 mt-4">
+    <div>
+      <Label htmlFor="category-type">الاسم</Label>
+      <Input
+        id="category-type"
+        value={categoryForm.type}
+        onChange={(event) =>
+          setCategoryForm({ ...categoryForm, type: event.target.value })
+        }
+        placeholder="مثال: القرآن، الحديث، الحضور، السلوك"
+      />
+    </div>
 
-                    <Input
-                      id="category-name"
-                      value={
-                        categoryForm.name
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          name:
-                            event.target
-                              .value,
-                        })
-                      }
-                      placeholder="مثال: القرآن، الحديث، الحضور، السلوك"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="category-description">
-                      الوصف
-                      (اختياري)
-                    </Label>
-
-                    <Textarea
-                      id="category-description"
-                      value={
-                        categoryForm.description
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          description:
-                            event.target
-                              .value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <Button
-                    onClick={
-                      handleSaveCategory
-                    }
-                    disabled={
-                      categorySaving
-                    }
-                    className="w-full"
-                  >
-                    {categorySaving
-                      ? "جارٍ الحفظ..."
-                      : editingCategory
-                      ? "حفظ التعديلات"
-                      : "إضافة"}
-                  </Button>
-                </div>
-              </DialogContent>
+    <Button onClick={handleSaveCategory} disabled={categorySaving} className="w-full">
+      {categorySaving ? "جارٍ الحفظ..." : editingCategory ? "حفظ التعديلات" : "إضافة"}
+    </Button>
+  </div>
+</DialogContent>
             </Dialog>
           </div>
 
@@ -2063,97 +2081,45 @@ const PointsPage = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="p-4 text-right">
-                      الاسم
-                    </th>
+  <tr className="border-b border-border bg-muted/50">
+    <th className="p-4 text-right">الاسم</th>
+    <th className="p-4 text-right" />
+  </tr>
+</thead>
 
-                    <th className="p-4 text-right">
-                      الوصف
-                    </th>
-
-                    <th className="p-4 text-right" />
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {lookupsLoading &&
-                  categories.length ===
-                    0 ? (
-                    <tr>
-                      <td
-                        className="p-4 text-center text-muted-foreground"
-                        colSpan={3}
-                      >
-                        جارٍ التحميل...
-                      </td>
-                    </tr>
-                  ) : categories.length ===
-                    0 ? (
-                    <tr>
-                      <td
-                        className="p-4 text-center text-muted-foreground"
-                        colSpan={3}
-                      >
-                        لا توجد تصنيفات بعد.
-                      </td>
-                    </tr>
-                  ) : (
-                    categories.map(
-                      (category) => (
-                        <tr
-                          key={
-                            category.id
-                          }
-                          className="border-b border-border/50 hover:bg-muted/30 transition-colors"
-                        >
-                          <td className="p-4 font-medium">
-                            {
-                              category.name
-                            }
-                          </td>
-
-                          <td className="p-4 text-muted-foreground">
-                            {
-                              category.description ||
-                              "-"
-                            }
-                          </td>
-
-                          <td className="p-4">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  openEditCategory(
-                                    category
-                                  )
-                                }
-                              >
-                                <Pencil className="h-3.5 w-3.5 ml-1" />
-                                تعديل
-                              </Button>
-
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() =>
-                                  setCategoryDeleteTarget(
-                                    category
-                                  )
-                                }
-                              >
-                                <Trash2 className="h-3.5 w-3.5 ml-1" />
-                                حذف
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    )
-                  )}
-                </tbody>
+<tbody>
+  {lookupsLoading && categories.length === 0 ? (
+    <tr>
+      <td className="p-4 text-center text-muted-foreground" colSpan={2}>
+        جارٍ التحميل...
+      </td>
+    </tr>
+  ) : categories.length === 0 ? (
+    <tr>
+      <td className="p-4 text-center text-muted-foreground" colSpan={2}>
+        لا توجد تصنيفات بعد.
+      </td>
+    </tr>
+  ) : (
+    categories.map((category) => (
+      <tr key={category.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+        <td className="p-4 font-medium">{category.type}</td>
+        <td className="p-4">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => openEditCategory(category)}>
+              <Pencil className="h-3.5 w-3.5 ml-1" />
+              تعديل
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setCategoryDeleteTarget(category)}>
+              <Trash2 className="h-3.5 w-3.5 ml-1" />
+              حذف
+            </Button>
+          </div>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
               </table>
             </div>
           </div>
@@ -2175,15 +2141,7 @@ const PointsPage = () => {
                 </DialogTitle>
               </DialogHeader>
 
-              <p>
-                هل أنت متأكد من حذف تصنيف
-                {" "}
-                «
-                {
-                  categoryDeleteTarget?.name
-                }
-                »؟
-              </p>
+              <p>هل أنت متأكد من حذف تصنيف «{ categoryDeleteTarget?.type}»؟</p>
 
               <div className="flex gap-3 mt-4">
                 <Button
@@ -2221,306 +2179,7 @@ const PointsPage = () => {
           value="leaderboard"
           className="space-y-6"
         >
-          <div className="glass-card rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-5">
-              <div className="flex-1">
-                <Label>
-                  الفصل
-                </Label>
-
-                <Select
-                  value={
-                    leaderboardSemesterId
-                  }
-                  onValueChange={
-                    setLeaderboardSemesterId
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفصل" />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem
-                      value={
-                        ALL_SEMESTERS
-                      }
-                    >
-                      كل الفصول
-                    </SelectItem>
-
-                    {semesters.map(
-                      (
-                        semester
-                      ) => (
-                        <SelectItem
-                          key={
-                            semester.id
-                          }
-                          value={
-                            semester.id
-                          }
-                        >
-                          {
-                            semester.name
-                          }
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-full sm:w-32">
-                <Label>
-                  العدد
-                </Label>
-
-                <Input
-                  type="number"
-                  min={1}
-                  value={
-                    leaderboardTop
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setLeaderboardTop(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <Button
-                onClick={() =>
-                  void fetchLeaderboard()
-                }
-                disabled={
-                  leaderboardLoading
-                }
-              >
-                {leaderboardLoading
-                  ? "جارٍ التحميل..."
-                  : "تحديث"}
-              </Button>
-            </div>
-
-            {topStudents.length >
-            0 ? (
-              <div className="space-y-3">
-                {topStudents.map(
-                  (
-                    student,
-                    index
-                  ) => (
-                    <div
-                      key={
-                        student.studentId
-                      }
-                      className="flex items-center justify-between rounded-lg border bg-background/50 p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-muted text-muted-foreground"
-                        >
-                          {
-                            index + 1
-                          }
-                        </span>
-
-                        <span className="font-medium">
-                          {
-                            student.studentName
-                          }
-                        </span>
-                      </div>
-
-                      <Badge>
-                        {
-                          student.totalPoints
-                        }
-                        {" "}
-                        نقطة
-                      </Badge>
-                    </div>
-                  )
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                {leaderboardLoading
-                  ? "جارٍ التحميل..."
-                  : "لا توجد بيانات متاحة."}
-              </p>
-            )}
-          </div>
-
-          {/* تقرير حسب التصنيف */}
-
-          <div className="glass-card rounded-xl p-5">
-            <h3 className="font-bold mb-4">
-              النقاط حسب التصنيف
-            </h3>
-
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-5">
-              <div className="flex-1">
-                <Label>
-                  الفصل
-                </Label>
-
-                <Select
-                  value={
-                    reportSemesterId
-                  }
-                  onValueChange={
-                    setReportSemesterId
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفصل" />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem
-                      value={
-                        ALL_SEMESTERS
-                      }
-                    >
-                      كل الفصول
-                    </SelectItem>
-
-                    {semesters.map(
-                      (
-                        semester
-                      ) => (
-                        <SelectItem
-                          key={
-                            semester.id
-                          }
-                          value={
-                            semester.id
-                          }
-                        >
-                          {
-                            semester.name
-                          }
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>
-                  من تاريخ
-                </Label>
-
-                <Input
-                  type="date"
-                  value={
-                    reportFromDate
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setReportFromDate(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div>
-                <Label>
-                  إلى تاريخ
-                </Label>
-
-                <Input
-                  type="date"
-                  value={
-                    reportToDate
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setReportToDate(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <Button
-                onClick={() =>
-                  void fetchByCategoryReport()
-                }
-                disabled={
-                  byCategoryLoading
-                }
-              >
-                {byCategoryLoading
-                  ? "جارٍ التحميل..."
-                  : "تحديث"}
-              </Button>
-            </div>
-
-            {byCategoryData.length >
-            0 ? (
-              <div className="space-y-3">
-                {byCategoryData.map(
-                  (
-                    category
-                  ) => (
-                    <div
-                      key={
-                        category.categoryId
-                      }
-                    >
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="font-medium">
-                          {
-                            category.categoryName
-                          }
-                        </span>
-
-                        <span className="text-muted-foreground">
-                          {
-                            category.totalPoints
-                          }
-                          {" "}
-                          نقطة
-                        </span>
-                      </div>
-
-                      <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full bg-primary"
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              (Math.abs(
-                                category.totalPoints
-                              ) /
-                                maxCategoryTotal) *
-                                100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                {byCategoryLoading
-                  ? "جارٍ التحميل..."
-                  : "اضغط تحديث لعرض التقرير."}
-              </p>
-            )}
-          </div>
+          {/* فارغة مؤقتًا — سيتم إضافة المحتوى لاحقًا */}
         </TabsContent>
       </Tabs>
     </DashboardLayout>

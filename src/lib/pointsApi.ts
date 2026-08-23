@@ -4,31 +4,31 @@ import type { AxiosInstance } from "axios";
 
 export interface PointCategoryDto {
   id: string;
-  name: string;
-  description?: string | null;
+  type: string;
 }
 
 export interface CreatePointCategoryRequest {
-  name: string;
-  description?: string | null;
+  type: string;
 }
 
 export interface UpdatePointCategoryRequest {
-  name?: string | null;
-  description?: string | null;
+  type?: string | null;
 }
 
 export interface PointDto {
   id: string;
   studentId: string;
   studentName?: string | null;
-  teacherId?: string | null;
-  teacherName?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
   pointValue: number;
   notes?: string | null;
-  semesterId?: string | null;
+  title?: string | null;
+  smesterId?: string | null;
+  courseId?: string | null;
+  classId?: string | null;
+  givenByTeacherId?: string | null;   
+  teacherName?: string | null;       
   createdAt?: string | null;
 }
 
@@ -277,7 +277,7 @@ export const addStudentAssessment = async (
 ) => {
   const response =
     await client.post<PointDto>(
-      "/assessments",
+      "/Points",
       payload,
     );
 
