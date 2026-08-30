@@ -18,17 +18,10 @@ import {
   PieChart as PieIcon,
   Trophy,
   AlertTriangle,
-  Medal,
   CalendarDays,
   BookMarked,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -245,16 +238,6 @@ const Index = () => {
       (pointsOverview?.studentPointsDetails ?? [])
         .slice()
         .sort((a, b) => Number(b.totalPoints) - Number(a.totalPoints))
-        .slice(0, 5),
-    [pointsOverview]
-  );
-
-  // أفضل الأساتذة تفاعلاً — أعلى 5 حسب النقاط الممنوحة
-  const topTeachersLeaderboard = useMemo(
-    () =>
-      (pointsOverview?.teacherPointsGiven ?? [])
-        .slice()
-        .sort((a, b) => Number(b.totalPointsGiven) - Number(a.totalPointsGiven))
         .slice(0, 5),
     [pointsOverview]
   );
@@ -639,7 +622,7 @@ const Index = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-        {/* Attendance */}
+        {/* Attendance — قائمة مرتّبة بدل الرسم البياني */}
         <div className="lg:col-span-2">
           <Card>
             <div className="flex items-center gap-2 mb-6">
@@ -648,29 +631,42 @@ const Index = () => {
             </div>
 
             {attendanceData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={attendanceData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="name" interval={0} angle={-20} textAnchor="end" height={70} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip
-                    formatter={(value) => [`${Number(value).toFixed(1)}%`, "نسبة الحضور"]}
-                    contentStyle={{
-                      borderRadius: "10px",
-                      border: "none",
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-                      direction: "rtl",
-                    }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    radius={[8, 8, 0, 0]}
-                    className="fill-green-600"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-4">
+                {attendanceData.map((item, i) => (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <span
+                      className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i === 0
+                          ? "bg-yellow-100 text-yellow-700"
+                          : i === 1
+                          ? "bg-gray-100 text-gray-600"
+                          : i === 2
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-medium text-gray-700 truncate">{item.name}</span>
+                        <span className="text-sm font-bold text-green-700 shrink-0 mr-2">
+                          {item.value.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-green-600 transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(0, item.value))}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">
+              <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
                 {isLoading ? "جارٍ تحميل بيانات الحضور..." : "لا توجد بيانات حضور متاحة"}
               </div>
             )}
@@ -763,46 +759,6 @@ const Index = () => {
           ) : (
             <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
               {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات نقاط متاحة"}
-            </div>
-          )}
-        </Card>
-
-        {/* أفضل الأساتذة */}
-        <Card>
-          <div className="flex items-center gap-2 mb-5">
-            <Medal className="w-5 h-5 text-green-600" />
-            <h3 className="font-bold text-gray-800">أفضل الأساتذة تفاعلاً</h3>
-          </div>
-
-          {topTeachersLeaderboard.length > 0 ? (
-            <div className="space-y-3">
-              {topTeachersLeaderboard.map((teacher, i) => (
-                <div key={teacher.teacherId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        i === 0
-                          ? "bg-yellow-100 text-yellow-700"
-                          : i === 1
-                          ? "bg-gray-100 text-gray-600"
-                          : i === 2
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {i + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">{teacher.teacherName}</span>
-                  </div>
-                  <span className="text-sm font-bold text-green-700">
-                    {formatNumber(teacher.totalPointsGiven)} نقطة
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
-              {isLoading ? "جارٍ التحميل..." : "لا توجد بيانات متاحة"}
             </div>
           )}
         </Card>

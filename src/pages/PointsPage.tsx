@@ -54,11 +54,9 @@ import {
   getPointsPaged,
   deletePoint,
   addStudentAssessment,
-  getTopStudentsReport,
   getPointsByCategoryReport,
   type PointCategoryDto,
   type PointDto,
-  type TopStudentPointDto,
   type PointsByCategoryDto,
 } from "@/lib/pointsApi";
 
@@ -134,6 +132,39 @@ interface PagedResponse<T> {
   page?: number;
   pageSize?: number;
   totalPages?: number;
+}
+
+interface StudentPointsOverviewDetail {
+  studentId: string;
+  studentName: string;
+  totalPoints: number;
+  quranPoints: number;
+  hadithPoints: number;
+  attendancePoints: number;
+  behaviorPoints: number;
+}
+
+interface TeacherPointsOverviewDetail {
+  teacherId: string;
+  teacherName: string;
+  totalPointsGiven: number;
+  pointsByCategory: number;
+  studentsCount: number;
+}
+
+interface PointsOverviewReportDto {
+  semesterId: string | null;
+  semesterName: string | null;
+  overallSummary: {
+    totalPoints: number;
+    quranPoints: number;
+    hadithPoints: number;
+    attendancePoints: number;
+    behaviorPoints: number;
+    totalCourses: number;
+  };
+  studentPointsDetails: StudentPointsOverviewDetail[];
+  teacherPointsGiven: TeacherPointsOverviewDetail[];
 }
 
 const normalizeCollection = <T,>(
@@ -348,7 +379,13 @@ const PointsPage = () => {
   ] = useState("10");
 
   const [topStudents, setTopStudents] =
-    useState<TopStudentPointDto[]>([]);
+    useState<StudentPointsOverviewDetail[]>([]);
+
+  const [topTeachersGiven, setTopTeachersGiven] =
+    useState<TeacherPointsOverviewDetail[]>([]);
+
+  const [leaderboardSummary, setLeaderboardSummary] =
+    useState<PointsOverviewReportDto["overallSummary"] | null>(null);
 
   const [
     leaderboardLoading,
@@ -377,9 +414,7 @@ const PointsPage = () => {
   const [
     byCategoryData,
     setByCategoryData,
-  ] = useState<
-    PointsByCategoryDto[]
-  >([]);
+  ] = useState<PointsByCategoryDto[]>([]);
 
   const [
     byCategoryLoading,
@@ -482,9 +517,7 @@ const PointsPage = () => {
         setCoursesLoading(true);
 
         const response =
-          await axiosClient.get<
-            Course[]
-          >("/courses");
+          await axiosClient.get<Course[]>("/courses");
 
         setCourses(
           normalizeCollection(
@@ -514,9 +547,7 @@ const PointsPage = () => {
         setHalaqasLoading(true);
 
         const response =
-          await axiosClient.get<
-            Halaqa[]
-          >("/halaqas");
+          await axiosClient.get<Halaqa[]>("/halaqas");
 
         setHalaqas(
           normalizeCollection(
@@ -604,9 +635,7 @@ const PointsPage = () => {
         );
 
         const studentsData =
-          normalizeCollection<
-            StudentBrief
-          >(response.data);
+          normalizeCollection<StudentBrief>(response.data);
 
         setHalaqaStudents(
           studentsData
@@ -1262,38 +1291,33 @@ const resolveCategoryName = (point: PointDto) =>
   const fetchLeaderboard =
     async () => {
       try {
-        setLeaderboardLoading(
-          true
+        setLeaderboardLoading(true);
+
+        const response = await axiosClient.get<PointsOverviewReportDto>(
+          "/reports/points/overview",
+          {
+            params:
+              leaderboardSemesterId === ALL_SEMESTERS
+                ? undefined
+                : { semesterId: leaderboardSemesterId },
+          }
         );
 
-        const data =
-          await getTopStudentsReport(
-            axiosClient,
-            {
-              semesterId:
-                leaderboardSemesterId ===
-                ALL_SEMESTERS
-                  ? undefined
-                  : leaderboardSemesterId,
+        const topCount = Number(leaderboardTop) || 10;
 
-              top:
-                Number(
-                  leaderboardTop
-                ) || 10,
-            }
-          );
+        const sortedStudents = [...(response.data.studentPointsDetails ?? [])].sort(
+          (a, b) => Number(b.totalPoints) - Number(a.totalPoints)
+        );
 
-        setTopStudents(data);
+        setTopStudents(sortedStudents.slice(0, topCount));
+        setTopTeachersGiven(response.data.teacherPointsGiven ?? []);
+        setLeaderboardSummary(response.data.overallSummary ?? null);
       } catch (error) {
         console.error(error);
 
-        toast.error(
-          "تعذر تحميل لوحة الصدارة"
-        );
+        toast.error("تعذر تحميل لوحة الصدارة");
       } finally {
-        setLeaderboardLoading(
-          false
-        );
+        setLeaderboardLoading(false);
       }
     };
 
@@ -1301,7 +1325,7 @@ const resolveCategoryName = (point: PointDto) =>
     void fetchLeaderboard();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [leaderboardSemesterId, leaderboardTop]);
 
   // ───────────────────────────────────────────
   // Category report
@@ -2179,7 +2203,165 @@ const resolveCategoryName = (point: PointDto) =>
           value="leaderboard"
           className="space-y-6"
         >
-          {/* فارغة مؤقتًا — سيتم إضافة المحتوى لاحقًا */}
+          {/* فلاتر */}
+          <div className="glass-card rounded-xl p-5 flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <Label>الفصل</Label>
+              <Select
+                value={leaderboardSemesterId}
+                onValueChange={setLeaderboardSemesterId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="كل الفصول" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_SEMESTERS}>كل الفصول</SelectItem>
+                  {semesters.map((semester) => (
+                    <SelectItem key={semester.id} value={String(semester.id)}>
+                      {semester.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full sm:w-32">
+              <Label>عدد الطلاب</Label>
+              <Input
+                type="number"
+                min={1}
+                value={leaderboardTop}
+                onChange={(event) => setLeaderboardTop(event.target.value)}
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              className="gap-2 sm:w-auto w-full"
+              onClick={() => void fetchLeaderboard()}
+              disabled={leaderboardLoading}
+            >
+              {leaderboardLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trophy className="h-4 w-4" />
+              )}
+              تحديث
+            </Button>
+          </div>
+
+          {/* ملخص عام */}
+          {leaderboardSummary && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="glass-card rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">إجمالي النقاط</p>
+                <p className="text-2xl font-bold">{leaderboardSummary.totalPoints}</p>
+              </div>
+              <div className="glass-card rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">عدد الكورسات</p>
+                <p className="text-2xl font-bold">{leaderboardSummary.totalCourses}</p>
+              </div>
+              <div className="glass-card rounded-xl p-4 text-center col-span-2 sm:col-span-1">
+                <p className="text-xs text-muted-foreground mb-1">عدد الطلاب المعروضين</p>
+                <p className="text-2xl font-bold">{topStudents.length}</p>
+              </div>
+            </div>
+          )}
+
+          {/* الطلاب الأعلى نقاطاً */}
+          <div className="glass-card rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-5">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              <h3 className="font-bold">الأعلى نقاطًا</h3>
+            </div>
+
+            {leaderboardLoading && topStudents.length === 0 ? (
+              <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                جارٍ التحميل...
+              </div>
+            ) : topStudents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                لا توجد بيانات نقاط متاحة لهذا الفصل.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {topStudents.map((student, i) => (
+                  <div
+                    key={student.studentId}
+                    className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
+                          i === 0
+                            ? "bg-yellow-100 text-yellow-700"
+                            : i === 1
+                            ? "bg-gray-100 text-gray-600"
+                            : i === 2
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="font-medium truncate">{student.studentName}</span>
+                    </div>
+
+                    <Badge variant={student.totalPoints >= 0 ? "default" : "destructive"}>
+                      {student.totalPoints >= 0 ? "+" : ""}
+                      {student.totalPoints}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* أكثر المعلمين منحاً للنقاط */}
+          {topTeachersGiven.length > 0 && (
+            <div className="glass-card rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-5">
+                <Award className="h-5 w-5 text-green-600" />
+                <h3 className="font-bold">أكثر المعلمين منحًا للنقاط</h3>
+              </div>
+
+              <div className="space-y-3">
+                {[...topTeachersGiven]
+                  .sort((a, b) => Number(b.totalPointsGiven) - Number(a.totalPointsGiven))
+                  .map((teacher, i) => (
+                    <div
+                      key={teacher.teacherId}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
+                            i === 0
+                              ? "bg-yellow-100 text-yellow-700"
+                              : i === 1
+                              ? "bg-gray-100 text-gray-600"
+                              : i === 2
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{teacher.teacherName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {teacher.studentsCount} طالب
+                          </p>
+                        </div>
+                      </div>
+
+                      <Badge variant="secondary">{teacher.totalPointsGiven} نقطة</Badge>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </DashboardLayout>

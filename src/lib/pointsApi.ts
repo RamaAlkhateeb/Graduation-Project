@@ -354,3 +354,35 @@ export const getTopStudentsReport =
       response.data,
     );
   };
+  // ── إجمالي نقاط الطلاب (لوحة الصدارة) ──────────────────────────────────────
+
+export interface StudentPointsTotalDto {
+  studentId: string;
+  studentName: string;
+  totalPoints: number;
+}
+
+export interface PagedStudentsPointsTotals {
+  items: StudentPointsTotalDto[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const getStudentsPointsTotals = async (
+  client: AxiosInstance,
+  params?: {
+    studentName?: string;
+    classId?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) => {
+  const response = await client.get<PagedStudentsPointsTotals>(
+    "/students/points-totals",
+    { params },
+  );
+
+  return response.data;
+};
