@@ -34,7 +34,8 @@ import {
   getMemorizationStatuses,
   getStudentQuranPages,
   getStudentHadiths,
-  getStudentHalaqas,
+  getStudentHalaqasFromFiltered,
+  getHalaqaTeachers,
   getHadiths,
   addQuranPage,
   addHadith,
@@ -46,6 +47,7 @@ import {
   type StudentHadithDetailDto,
   type HadithDto,
   type StudentHalaqaDto,
+  type TeacherOptionDto,
 } from "@/lib/memorizationApi";
 import { getStudentById, type StudentDetailDto } from "@/lib/studentApi";
 
@@ -106,6 +108,11 @@ const StudentMemorizationPage = () => {
   const [formPageNumber, setFormPageNumber] = useState("");
   const [formHadithId, setFormHadithId] = useState("");
   const [formNotes, setFormNotes] = useState("");
+  const [formTeacherId, setFormTeacherId] = useState("");
+
+  // ── teacher options (per selected halaqa within the add form) ──
+  const [teacherOptions, setTeacherOptions] = useState<TeacherOptionDto[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(false);
 
   // ── edit form ──
   const [editStatusId, setEditStatusId] = useState<number>(DEFAULT_STATUS_ID);
@@ -156,7 +163,7 @@ const StudentMemorizationPage = () => {
         const [studentData, statusData, halaqaData] = await Promise.all([
           getStudentById(axiosClient, studentId),
           getMemorizationStatuses(axiosClient),
-          getStudentHalaqas(axiosClient, studentId),
+          getStudentHalaqasFromFiltered(axiosClient, studentId),
         ]);
 
         setStudent(studentData);
@@ -174,14 +181,49 @@ const StudentMemorizationPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, halaqaIdFromQuery]);
 
+  const loadTeachersForHalaqa = async (halaqaId: string) => {
+    if (!halaqaId) {
+      setTeacherOptions([]);
+      return;
+    }
+
+    try {
+      setTeachersLoading(true);
+      const data = await getHalaqaTeachers(axiosClient, halaqaId);
+      setTeacherOptions(data);
+    } catch (error) {
+      console.error(error);
+      toast.error("تعذر تحميل أساتذة الحلقة");
+      setTeacherOptions([]);
+    } finally {
+      setTeachersLoading(false);
+    }
+  };
+
+  const handleFormHalaqaChange = (value: string) => {
+    setFormHalaqaId(value);
+    setFormTeacherId("");
+    void loadTeachersForHalaqa(value);
+  };
+
   const openAdd = async (recordType: MemorizationRecordType) => {
     setAddType(recordType);
-    setFormHalaqaId(halaqaIdFromQuery ?? (halaqas.length === 1 ? halaqas[0].halaqaId : ""));
+
+    const initialHalaqaId =
+      halaqaIdFromQuery ?? (halaqas.length === 1 ? halaqas[0].halaqaId : "");
+
+    setFormHalaqaId(initialHalaqaId);
     setFormStatusId(DEFAULT_STATUS_ID);
     setFormPageNumber("");
     setFormHadithId("");
     setFormNotes("");
+    setFormTeacherId("");
+    setTeacherOptions([]);
     setAddOpen(true);
+
+    if (initialHalaqaId) {
+      void loadTeachersForHalaqa(initialHalaqaId);
+    }
 
     // تحميل قائمة الأحاديث عند فتح نموذج إضافة حديث فقط
     if (recordType === "hadith" && hadithLookup.length === 0) {
@@ -206,6 +248,8 @@ const StudentMemorizationPage = () => {
     setFormPageNumber("");
     setFormHadithId("");
     setFormNotes("");
+    setFormTeacherId("");
+    setTeacherOptions([]);
   };
 
   const handleAdd = async () => {
@@ -220,14 +264,22 @@ const StudentMemorizationPage = () => {
       setSaving(true);
 
       if (addType === "quran-page") {
-        const pageNumber = Number(formPageNumber);
-        if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 604) {
+        const trimmedPageNumber = formPageNumber.trim();
+        const pageNumber = Number(trimmedPageNumber);
+
+        if (
+          trimmedPageNumber === "" ||
+          !Number.isInteger(pageNumber) ||
+          pageNumber < 1 ||
+          pageNumber > 604
+        ) {
           toast.error("رقم الصفحة يجب أن يكون بين 1 و 604");
           return;
         }
 
         await addQuranPage(axiosClient, formHalaqaId, studentId, {
           pageNumber,
+          teacherId: formTeacherId || null,
           statusId: formStatusId,
           notes: formNotes.trim() || null,
         });
@@ -240,6 +292,7 @@ const StudentMemorizationPage = () => {
 
         await addHadith(axiosClient, formHalaqaId, studentId, {
           hadithId: formHadithId,
+          teacherId: formTeacherId || null,
           statusId: formStatusId,
           notes: formNotes.trim() || null,
         });
@@ -533,14 +586,43 @@ const StudentMemorizationPage = () => {
           <div className="space-y-4 mt-4">
             <div>
               <Label htmlFor="mem-add-halaqa">الحلقة</Label>
-              <Select value={formHalaqaId} onValueChange={setFormHalaqaId}>
+              <Select value={formHalaqaId} onValueChange={handleFormHalaqaChange}>
                 <SelectTrigger id="mem-add-halaqa">
                   <SelectValue placeholder="اختر الحلقة" />
                 </SelectTrigger>
                 <SelectContent>
                   {halaqas.map((halaqa) => (
                     <SelectItem key={halaqa.halaqaId} value={halaqa.halaqaId}>
-                      {halaqa.halaqaName} — {halaqa.courseName}
+                      {halaqa.halaqaName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="mem-add-teacher">الأستاذ (اختياري)</Label>
+              <Select
+                value={formTeacherId}
+                onValueChange={setFormTeacherId}
+                disabled={!formHalaqaId || teachersLoading}
+              >
+                <SelectTrigger id="mem-add-teacher">
+                  <SelectValue
+                    placeholder={
+                      !formHalaqaId
+                        ? "اختر الحلقة أولاً"
+                        : teachersLoading
+                        ? "جارٍ تحميل الأساتذة..."
+                        : "اختر الأستاذ"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {teacherOptions.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                      {teacher.fatherName ? ` — ${teacher.fatherName}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
